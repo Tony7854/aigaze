@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的AI凝視 - HTML Web App</title>
+    <!-- 導入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 設定 Inter 字體 */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* 簡單的載入動畫 */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+        .app-container {
+            min-height: 100vh;
+            background: linear-gradient(to bottom right, #e0f2f7, #e0e7fa); /* 漸變背景 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+        }
+        .card {
+            background-color: #ffffff;
+            border-radius: 1rem; /* rounded-xl */
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); /* shadow-2xl */
+            padding: 2rem; /* p-8 */
+            max-width: 48rem; /* max-w-2xl for results/reflection, max-w-lg for input, max-w-md for home */
+            width: 100%;
+        }
+    </style>
+</head>
+<body class="font-inter">
+    <div id="app-root" class="app-container">
+        <!-- App 內容將在這裡動態載入 -->
+    </div>
+
+    <script>
+        // 應用程式狀態管理
+        const appState = {
+            currentScreen: 'home', // 'home', 'input', 'cameraView', 'gazeMode', 'results', 'reflection'
+            selectedGazeMode: '',
+            uploadedImageUrl: null,
+            defaultPlaceholderImageUrl: "https://placehold.co/800x600/E0F2F7/2C3E50?text=Upload%20Your%20Image",
+            lastAnalysisDescription: '',
+            // 反思頁面相關的圖片生成狀態
+            generatedImageUrl: null,
+            isGeneratingImage: false,
+            // 結果頁面相關的圖片生成狀態
+            generatedImageResultsUrl: null, // 新增：用於結果頁面生成的圖片
+            isGeneratingImageResults: false, // 新增：用於結果頁面圖片生成中的狀態
+            // 攝影機相關 DOM 引用
+            videoElement: null,
+            canvasElement: null,
+            mediaStream: null
+        };
+
+        // DOM 引用
+        const appRoot = document.getElementById('app-root');
+
+        // --- 核心輔助函數 ---
+
+        // 停止攝影機
+        function stopCamera() {
+            if (appState.mediaStream) {
+                appState.mediaStream.getTracks().forEach(track => track.stop());
+                appState.mediaStream = null;
+            }
+            if (appState.videoElement) {
+                appState.videoElement.srcObject = null;
+            }
+        }
+
+        // 啟動攝影機
+        async function startCamera() {
+            stopCamera(); // 確保先停止任何現有的流
+            try {
+                // 嘗試獲取後置鏡頭，如果沒有則使用預設
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                appState.mediaStream = stream;
+                if (appState.videoElement) {
+                    appState.videoElement.srcObject = stream;
+                }
+            } catch (err) {
+                console.error("無法訪問攝影機: ", err);
+                alert("無法啟動攝影機，請檢查權限或設備。");
+                appState.currentScreen = 'input'; // 失敗後返回輸入頁面
+                renderScreen();
+            }
+        }
+
+        // 拍攝照片
+        function capturePhoto() {
+            if (appState.videoElement && appState.canvasElement) {
+                const video = appState.videoElement;
+                const canvas = appState.canvasElement;
+                const context = canvas.getContext('2d');
+
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const imageDataUrl = canvas.toDataURL('image/png');
+                appState.uploadedImageUrl = imageDataUrl;
+                stopCamera(); // 拍照後停止攝影機
+                appState.currentScreen = 'gazeMode'; // 拍照後直接進入凝視模式選擇
+                renderScreen();
+            }
+        }
+
+        // 模擬AI分析結果的邏輯
+        function getAnalysisData(mode) {
+            let annotations = [];
+            let description = '';
+
+            switch (mode) {
+                case 'pattern':
+                    annotations = [
+                        { type: 'rect', x: 50, y: 50, width: 100, height: 100, color: 'blue', label: '重複結構' },
+                        { type: 'rect', x: 200, y: 70, width: 80, height: 80, color: 'blue', label: '相似形狀' },
+                        { type: 'text', x: 15, y: 40, text: 'AI識別：重複形狀', color: 'blue' },
+                    ];
+                    description = 'AI在圖片中識別出了重複出現的方形和矩形模式。';
+                    break;
+                case 'anomaly':
+                    annotations = [
+                        { type: 'circle', x: 400, y: 300, radius: 40, color: 'red', label: '異常物件' },
+                        { type: 'text', x: 15, y: 40, text: 'AI識別：異常元素', color: 'red' },
+                    ];
+                    description = 'AI發現圖片中央區域存在一個不符合常規的異常物件。';
+                    break;
+                case 'aesthetic':
+                    annotations = [
+                        { type: 'line', x1: 0, y1: 0, x2: 800, y2: 600, color: 'green', label: '黃金比例線條' },
+                        { type: 'line', x1: 800, y1: 0, x2: 0, y2: 600, color: 'green' },
+                        { type: 'text', x: 15, y: 40, text: 'AI評估：平衡構圖', color: 'green' },
+                    ];
+                    description = 'AI評估此圖在構圖上具有高度對稱性和平衡感，符合美學原則。';
+                    break;
+                case 'color_emotion':
+                    annotations = [
+                        { type: 'rect', x: 0, y: 0, width: 800, height: 600, color: 'rgba(255, 165, 0, 0.2)', label: '溫暖色調' },
+                        { type: 'text', x: 15, y: 40, text: 'AI分析：溫暖情緒', color: 'orange' },
+                    ];
+                    description = 'AI分析圖片主要由暖色調構成，傳達出溫暖、活力和積極的情緒。';
+                    break;
+                case 'object_scene':
+                    annotations = [
+                        { type: 'rect', x: 150, y: 200, width: 200, height: 150, color: 'purple', label: '識別: 建築物' },
+                        { type: 'rect', x: 500, y: 400, width: 100, height: 80, color: 'cyan', label: '識別: 樹木' },
+                        { type: 'text', x: 15, y: 40, text: 'AI識別：城市景觀', color: 'gray' },
+                    ];
+                    description = 'AI識別出圖片中包含建築物和樹木，整體場景為城市景觀。';
+                    break;
+                case 'light_texture':
+                    annotations = [
+                        { type: 'rect', x: 100, y: 100, width: 150, height: 150, color: 'yellow', label: '強烈光影對比區' },
+                        { type: 'rect', x: 300, y: 400, width: 120, height: 100, color: 'lime', label: '粗糙紋理表面' },
+                        { type: 'text', x: 15, y: 40, text: 'AI聚焦：光影與紋理', color: 'black' },
+                    ];
+                    description = 'AI聚焦於圖片中的強烈光影對比和清晰的物體紋理。';
+                    break;
+                default:
+                    annotations = [];
+                    description = 'AI尚未分析，請選擇凝視模式。';
+            }
+            return { annotations, description };
+        }
+
+        // 處理反思頁面的圖片生成
+        async function handleGenerateReflectionImage() {
+            appState.isGeneratingImage = true;
+            appState.generatedImageUrl = null; // 清除上次生成的圖片
+            renderScreen(); // 更新 UI 顯示載入狀態
+
+            try {
+                const prompts = [
+                    "A surreal landscape inspired by repetitive patterns, vibrant colors",
+                    "An abstract art piece reflecting detected anomalies, unsettling yet beautiful",
+                    "A serene scene with perfect aesthetic composition, golden hour lighting",
+                    "A dynamic composition evoking strong emotions through color, expressive brushstrokes",
+                    "A futuristic cityscape with architectural details, glowing lights",
+                    "A close-up of natural textures with dramatic lighting, macro photography style"
+                ];
+                const randomPrompt = prompts[Math.floor(Math.random() * prompts.length)];
+
+                const payload = { instances: { prompt: randomPrompt }, parameters: { "sampleCount": 1} };
+                const apiKey = "" // Canvas 會自動提供 API Key
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
+                    const imageUrl = `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
+                    appState.generatedImageUrl = imageUrl;
+                } else {
+                    alert('圖片生成失敗，請稍後再試。');
+                    console.error('Image generation failed:', result);
+                }
+            } catch (error) {
+                alert('圖片生成時發生錯誤。');
+                console.error('Error during image generation:', error);
+            } finally {
+                appState.isGeneratingImage = false;
+                renderScreen(); // 更新 UI 顯示生成結果
+            }
+        }
+
+        // 新增：處理凝視結果頁面的「儲存分析結果並輸出圖片」
+        async function handleSaveResultsAsImage() {
+            appState.isGeneratingImageResults = true;
+            appState.generatedImageResultsUrl = null;
+            renderScreen(); // 更新 UI 顯示載入狀態
+
+            try {
+                // 根據 AI 分析結果和原始圖片的性質來構建提示
+                // 為了演示，我們使用 AI 的分析描述來生成一張概念圖
+                const promptText = `Generate an artistic image based on the AI analysis of an image: "${appState.lastAnalysisDescription}". Focus on abstract representation, emphasizing the identified patterns, anomalies, or aesthetic qualities. The style should be vibrant and thought-provoking.`;
+
+                const payload = { instances: { prompt: promptText }, parameters: { "sampleCount": 1} };
+                const apiKey = "" // Canvas 會自動提供 API Key
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
+                    appState.generatedImageResultsUrl = `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
+                } else {
+                    alert('根據分析結果生成圖片失敗，請稍後再試。');
+                    console.error('Image generation from results failed:', result);
+                }
+            } catch (error) {
+                alert('根據分析結果生成圖片時發生錯誤。');
+                console.error('Error during image generation from results:', error);
+            } finally {
+                appState.isGeneratingImageResults = false;
+                renderScreen(); // 更新 UI 顯示生成結果
+            }
+        }
+
+        // 下載圖片功能
+        function downloadImage(imageUrl, filename) {
+            const link = document.createElement('a');
+            link.href = imageUrl;
+            link.download = filename || 'ai_gaze_result.png';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // 分享到 Facebook (僅限文字/連結，圖片需手動上傳)
+        function shareToFacebook(description) {
+            const text = `透過「我的AI凝視」App，AI分析了我的圖片並發現：${description || '一個有趣的視覺！'} 探索更多AI凝視：[您的應用程式連結]`;
+            // 注意：直接分享 Data URL 圖片到 Facebook 是不支援的，通常需要圖片有公開 URL。
+            // 我們這裡只分享文字。
+            const shareUrl = `https://www.facebook.com/sharer/sharer.php?quote=${encodeURIComponent(text)}`;
+            window.open(shareUrl, '_blank');
+        }
+
+        // 分享到 Instagram (提示限制)
+        function shareToInstagram() {
+            alert("從網頁直接分享圖片到 Instagram 受限。請先下載圖片，再從 Instagram App 手動分享。");
+        }
+
+
+        // --- 渲染不同頁面的函數 ---
+
+        function renderHomeScreen() {
+            return `
+                <div class="card max-w-md text-center">
+                    <h1 class="text-4xl font-extrabold text-gray-800 mb-6">我的AI凝視</h1>
+                    <p class="text-lg text-gray-600 mb-8">透過AI的視角，重新發現圖像的奧秘。</p>
+                    <button id="start-gaze-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105">
+                        開始凝視
+                    </button>
+                </div>
+            `;
+        }
+
+        function renderInputScreen() {
+            return `
+                <div class="card max-w-lg">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">選擇圖片</h2>
+                    <div class="flex flex-col items-center space-y-4 mb-8">
+                        <label for="file-upload" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg cursor-pointer transition duration-300 text-center">
+                            從相簿選擇圖片
+                            <input id="file-upload" type="file" accept="image/*" class="hidden">
+                        </label>
+                        <button id="capture-photo-btn-input" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg transition duration-300">
+                            即時拍攝
+                        </button>
+                        <input type="text" placeholder="或貼上圖片URL (模擬，非實際載入)" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+
+                    ${appState.uploadedImageUrl ? `
+                    <div class="text-center mb-6">
+                        <img src="${appState.uploadedImageUrl}" alt="預覽圖片" class="max-w-full h-auto rounded-lg shadow-md mx-auto">
+                        <p class="text-sm text-gray-500 mt-2">以上為您選擇的圖片預覽。</p>
+                    </div>
+                    ` : ''}
+
+                    <div class="flex justify-between mt-6">
+                        <button id="input-back-btn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-lg transition duration-300">
+                            返回
+                        </button>
+                        <button id="input-next-btn" class="font-bold py-2 px-6 rounded-lg transition duration-300 ${appState.uploadedImageUrl ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-gray-300 text-gray-600 cursor-not-allowed'}">
+                            下一步
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderCameraViewScreen() {
+            return `
+                <div class="card max-w-lg text-center">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-6">即時拍攝</h2>
+                    <div class="relative w-full max-w-full overflow-hidden rounded-lg shadow-md mb-6 bg-gray-700" style="aspect-ratio: 4/3;">
+                        <video id="camera-video-stream" autoplay playsinline class="w-full h-full object-cover"></video>
+                        <canvas id="camera-canvas" style="display: none;"></canvas>
+                    </div>
+
+                    <div class="flex justify-center space-x-4 mt-6">
+                        <button id="camera-cancel-btn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-full transition duration-300">
+                            取消
+                        </button>
+                        <button id="camera-capture-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-full shadow-lg transition duration-300 transform hover:scale-105">
+                            確定拍攝
+                        </button>
+                    </div>
+                    <p class="text-sm text-gray-500 mt-4">請允許瀏覽器訪問攝影機。</p>
+                </div>
+            `;
+        }
+
+        function renderGazeModeSelectionScreen() {
+            const modeCards = [
+                { id: 'pattern', title: '重複模式識別', desc: '找出圖片中重複出現的形狀或結構。' },
+                { id: 'anomaly', title: '異常偵測', desc: '標示出圖片中不尋常或突兀的元素。' },
+                { id: 'aesthetic', title: '美學構圖分析', desc: '根據美學原則分析構圖優劣。' },
+                { id: 'color_emotion', title: '色彩情感分析', desc: '分析圖片傳達的情緒。' },
+                { id: 'object_scene', title: '物件/場景識別', desc: '識別圖片中的主要物件或場景類型。' },
+                { id: 'light_texture', title: '光影肌理探測', desc: '聚焦於光線變化和物體表面紋理。' },
+            ];
+
+            return `
+                <div class="card max-w-xl">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">選擇凝視模式</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                        ${modeCards.map(card => `
+                            <div id="mode-${card.id}" class="p-4 border-2 rounded-lg cursor-pointer transition duration-300 hover:shadow-lg ${appState.selectedGazeMode === card.id ? 'border-blue-500 bg-blue-50 shadow-md' : 'border-gray-200 bg-gray-50'}">
+                                <h3 class="text-xl font-semibold text-gray-800 mb-2">${card.title}</h3>
+                                <p class="text-gray-600 text-sm">${card.desc}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="flex justify-between mt-6">
+                        <button id="gaze-mode-back-btn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-lg transition duration-300">
+                            返回
+                        </button>
+                        <button id="gaze-mode-next-btn" class="font-bold py-2 px-6 rounded-lg transition duration-300 ${appState.selectedGazeMode ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-gray-300 text-gray-600 cursor-not-allowed'}">
+                            凝視
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderResultsScreen() {
+            const { annotations, description } = getAnalysisData(appState.selectedGazeMode);
+
+            const svgAnnotations = annotations.map((anno, index) => {
+                if (anno.type === 'rect') {
+                    return `<rect x="${anno.x}" y="${anno.y}" width="${anno.width}" height="${anno.height}" fill="${anno.color}" fill-opacity="0.2" stroke="${anno.color}" stroke-width="2" class="transition-all duration-500 ease-in-out"></rect>`;
+                } else if (anno.type === 'circle') {
+                    return `<circle cx="${anno.x}" cy="${anno.y}" r="${anno.radius}" fill="${anno.color}" fill-opacity="0.2" stroke="${anno.color}" stroke-width="2" class="transition-all duration-500 ease-in-out"></circle>`;
+                } else if (anno.type === 'line') {
+                    return `<line x1="${anno.x1}" y1="${anno.y1}" x2="${anno.x2}" y2="${anno.y2}" stroke="${anno.color}" stroke-width="3" stroke-dasharray="5,5" class="transition-all duration-500 ease-in-out"></line>`;
+                } else if (anno.type === 'text') {
+                    return `<text x="${anno.x}" y="${anno.y}" fill="${anno.color}" font-size="18" font-weight="bold" class="font-inter transition-all duration-500 ease-in-out">${anno.text}</text>`;
+                }
+                return '';
+            }).join('');
+
+            const annotationLabels = annotations.filter(a => a.label).map((a, i) =>
+                `<span key="${i}" class="block text-sm">${a.label}</span>`
+            ).join('');
+
+            return `
+                <div class="card max-w-2xl">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">凝視結果</h2>
+                    <div class="relative w-full max-w-full overflow-hidden rounded-lg shadow-md mb-6" style="aspect-ratio: 4/3;">
+                        <img src="${appState.uploadedImageUrl || appState.defaultPlaceholderImageUrl}" alt="分析圖片" class="absolute inset-0 w-full h-full object-cover" onerror="this.onerror=null;this.src='${appState.defaultPlaceholderImageUrl}';" />
+                        <svg class="absolute inset-0 w-full h-full" viewBox="0 0 800 600">${svgAnnotations}</svg>
+                        <div class="absolute top-2 left-2 right-2 text-white bg-black bg-opacity-50 p-2 rounded-md">
+                            ${annotationLabels}
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-50 p-4 rounded-lg mb-6 shadow-inner">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-2">AI凝視說明：</h3>
+                        <p class="text-gray-700">${description}</p>
+                    </div>
+
+                    <div class="flex justify-between flex-wrap gap-2 mt-6">
+                        <button id="results-back-btn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-lg transition duration-300 flex-grow">
+                            返回
+                        </button>
+                        <button id="results-reflect-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-lg transition duration-300 flex-grow">
+                            反思分析結果
+                        </button>
+                        <button id="results-generate-analysis-image-btn" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-6 rounded-lg transition duration-300 flex-grow ${appState.isGeneratingImageResults ? 'bg-gray-400 cursor-not-allowed' : ''}">
+                            ${appState.isGeneratingImageResults ? '生成中...' : '儲存分析結果並輸出圖片'}
+                        </button>
+                        <button id="results-download-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition duration-300 flex-grow">
+                            下載結果圖片
+                        </button>
+                        <button id="results-share-facebook-btn" class="bg-blue-800 hover:bg-blue-900 text-white font-bold py-2 px-6 rounded-lg transition duration-300 flex-grow">
+                            分享到 Facebook
+                        </button>
+                        <button id="results-share-instagram-btn" class="bg-pink-600 hover:bg-pink-700 text-white font-bold py-2 px-6 rounded-lg transition duration-300 flex-grow">
+                            分享到 Instagram
+                        </button>
+                    </div>
+
+                    ${appState.isGeneratingImageResults ? `
+                    <div class="text-center mt-8">
+                        <p class="text-gray-600">根據分析結果生成圖片中，請稍候...</p>
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mt-4"></div>
+                    </div>
+                    ` : ''}
+                    ${appState.generatedImageResultsUrl && !appState.isGeneratingImageResults ? `
+                    <div class="text-center mt-8 p-4 bg-gray-50 rounded-lg shadow-inner">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-4">根據分析結果生成的圖片：</h3>
+                        <img src="${appState.generatedImageResultsUrl}" alt="根據分析結果生成的圖片" class="max-w-full h-auto rounded-lg shadow-md mx-auto" onerror="this.onerror=null;this.src='https://placehold.co/400x300/FF0000/FFFFFF?text=Image+Error';">
+                        <p class="text-sm text-gray-500 mt-2">這張圖片是根據AI分析結果所生成的。</p>
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        function renderReflectionScreen() {
+            return `
+                <div class="card max-w-2xl">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">反思AI凝視</h2>
+
+                    <div class="text-center mb-6">
+                        <img src="${appState.uploadedImageUrl || appState.defaultPlaceholderImageUrl}" alt="您的圖片" class="max-w-full h-auto rounded-lg shadow-md mx-auto" onerror="this.onerror=null;this.src='${appState.defaultPlaceholderImageUrl}';" />
+                    </div>
+
+                    <div class="bg-gray-50 p-4 rounded-lg mb-6 shadow-inner">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-2">AI分析：</h3>
+                        <p class="text-gray-700">${appState.lastAnalysisDescription}</p>
+                    </div>
+
+                    <div class="mb-6">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-2">您的反思：</h3>
+                        <p class="text-gray-600 mb-3">請思考AI的觀察，這對您的創作或思考有何啟發？</p>
+                        <textarea id="reflection-textarea" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" rows="6" placeholder="在此輸入您的想法..."></textarea>
+                    </div>
+
+                    <div class="flex justify-between mt-6">
+                        <button id="reflection-back-btn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-lg transition duration-300">
+                            返回
+                        </button>
+                        <button id="generate-image-btn" class="font-bold py-2 px-6 rounded-lg transition duration-300 ${appState.isGeneratingImage ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700 text-white'}">
+                            ${appState.isGeneratingImage ? '生成中...' : '儲存反思並輸出'}
+                        </button>
+                    </div>
+
+                    ${appState.isGeneratingImage ? `
+                    <div class="text-center mt-8">
+                        <p class="text-gray-600">圖片生成中，請稍候...</p>
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mt-4"></div>
+                    </div>
+                    ` : ''}
+                    ${appState.generatedImageUrl && !appState.isGeneratingImage ? `
+                    <div class="text-center mt-8 p-4 bg-gray-50 rounded-lg shadow-inner">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-4">AI生成的靈感圖片：</h3>
+                        <img src="${appState.generatedImageUrl}" alt="AI 生成的圖片" class="max-w-full h-auto rounded-lg shadow-md mx-auto" onerror="this.onerror=null;this.src='https://placehold.co/400x300/FF0000/FFFFFF?text=Image+Error';">
+                        <p class="text-sm text-gray-500 mt-2">這張圖片是根據您的反思提示隨機生成的。</p>
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        // --- 渲染函數和事件監聽器綁定 ---
+
+        function renderScreen() {
+            // 清理現有內容和相關狀態
+            appRoot.innerHTML = '';
+            stopCamera(); // 在切換頁面時停止攝影機
+
+            // 重置非當前頁面相關的生成圖片狀態，避免混淆
+            if (appState.currentScreen !== 'reflection') {
+                appState.isGeneratingImage = false;
+                appState.generatedImageUrl = null;
+            }
+            if (appState.currentScreen !== 'results') { // 重置 results 頁面的生成圖片狀態
+                appState.isGeneratingImageResults = false;
+                appState.generatedImageResultsUrl = null;
+            }
+
+            let htmlContent = '';
+            let currentCardClass = 'card '; // 基礎 card 類別
+
+            switch (appState.currentScreen) {
+                case 'home':
+                    htmlContent = renderHomeScreen();
+                    currentCardClass += 'max-w-md text-center';
+                    break;
+                case 'input':
+                    htmlContent = renderInputScreen();
+                    currentCardClass += 'max-w-lg';
+                    break;
+                case 'cameraView':
+                    htmlContent = renderCameraViewScreen();
+                    currentCardClass += 'max-w-lg text-center';
+                    break;
+                case 'gazeMode':
+                    htmlContent = renderGazeModeSelectionScreen();
+                    currentCardClass += 'max-w-xl';
+                    break;
+                case 'results':
+                    const { description: resultsDesc } = getAnalysisData(appState.selectedGazeMode);
+                    appState.lastAnalysisDescription = resultsDesc; // 確保在渲染結果頁面時更新描述
+                    htmlContent = renderResultsScreen();
+                    currentCardClass += 'max-w-2xl';
+                    break;
+                case 'reflection':
+                    htmlContent = renderReflectionScreen();
+                    currentCardClass += 'max-w-2xl';
+                    break;
+                default:
+                    htmlContent = renderHomeScreen();
+                    currentCardClass += 'max-w-md text-center';
+            }
+
+            appRoot.innerHTML = htmlContent;
+            // 由於每次渲染都會替換內容，需要重新綁定事件監聽器
+            attachEventListeners();
+
+            // 如果是攝影機頁面，則獲取並設定 videoElement 和 canvasElement
+            if (appState.currentScreen === 'cameraView') {
+                appState.videoElement = document.getElementById('camera-video-stream');
+                appState.canvasElement = document.getElementById('camera-canvas');
+                // 在這裡才啟動攝影機，因為 videoElement 現在已經在 DOM 中了
+                startCamera();
+            }
+        }
+
+        function attachEventListeners() {
+            // 首頁
+            const startGazeBtn = document.getElementById('start-gaze-btn');
+            if (startGazeBtn) {
+                startGazeBtn.onclick = () => {
+                    appState.currentScreen = 'input';
+                    appState.uploadedImageUrl = null;
+                    renderScreen();
+                };
+            }
+
+            // 輸入頁面
+            const fileUpload = document.getElementById('file-upload');
+            if (fileUpload) {
+                fileUpload.onchange = (event) => {
+                    const file = event.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                            appState.uploadedImageUrl = reader.result;
+                            renderScreen(); // 重新渲染以顯示圖片預覽和啟用下一步按鈕
+                            // 不需要直接跳轉，讓用戶可以檢查預覽
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                };
+            }
+            const capturePhotoBtnInput = document.getElementById('capture-photo-btn-input');
+            if (capturePhotoBtnInput) {
+                capturePhotoBtnInput.onclick = () => {
+                    appState.currentScreen = 'cameraView';
+                    appState.uploadedImageUrl = null; // 清除上傳圖片，確保進入攝影機模式
+                    renderScreen();
+                };
+            }
+            const inputBackBtn = document.getElementById('input-back-btn');
+            if (inputBackBtn) {
+                inputBackBtn.onclick = () => {
+                    appState.currentScreen = 'home';
+                    renderScreen();
+                };
+            }
+            const inputNextBtn = document.getElementById('input-next-btn');
+            if (inputNextBtn) {
+                inputNextBtn.onclick = () => {
+                    if (appState.uploadedImageUrl) {
+                        appState.currentScreen = 'gazeMode';
+                        renderScreen();
+                    } else {
+                        alert('請先選擇或拍攝一張圖片！');
+                    }
+                };
+            }
+
+            // 攝影機介面
+            const cameraCancelBtn = document.getElementById('camera-cancel-btn');
+            if (cameraCancelBtn) {
+                cameraCancelBtn.onclick = () => {
+                    appState.currentScreen = 'input';
+                    stopCamera();
+                    renderScreen();
+                };
+            }
+            const cameraCaptureBtn = document.getElementById('camera-capture-btn');
+            if (cameraCaptureBtn) {
+                cameraCaptureBtn.onclick = capturePhoto;
+            }
+
+            // 凝視模式選擇頁面
+            const modeCards = ['pattern', 'anomaly', 'aesthetic', 'color_emotion', 'object_scene', 'light_texture'];
+            modeCards.forEach(id => {
+                const card = document.getElementById(`mode-${id}`);
+                if (card) {
+                    card.onclick = () => {
+                        appState.selectedGazeMode = id;
+                        renderScreen(); // 重新渲染以更新選中狀態
+                    };
+                }
+            });
+            const gazeModeBackBtn = document.getElementById('gaze-mode-back-btn');
+            if (gazeModeBackBtn) {
+                gazeModeBackBtn.onclick = () => {
+                    appState.currentScreen = 'input';
+                    renderScreen();
+                };
+            }
+            const gazeModeNextBtn = document.getElementById('gaze-mode-next-btn');
+            if (gazeModeNextBtn) {
+                gazeModeNextBtn.onclick = () => {
+                    if (appState.selectedGazeMode) {
+                        appState.currentScreen = 'results';
+                        renderScreen();
+                    } else {
+                        alert('請選擇一個凝視模式！');
+                    }
+                };
+            }
+
+            // 結果顯示頁面
+            const resultsBackBtn = document.getElementById('results-back-btn');
+            if (resultsBackBtn) {
+                resultsBackBtn.onclick = () => {
+                    appState.selectedGazeMode = '';
+                    appState.currentScreen = 'gazeMode';
+                    renderScreen();
+                };
+            }
+            const resultsReflectBtn = document.getElementById('results-reflect-btn');
+            if (resultsReflectBtn) {
+                resultsReflectBtn.onclick = () => {
+                    appState.currentScreen = 'reflection';
+                    appState.generatedImageUrl = null; // 進入反思頁面時清除生成圖片
+                    appState.isGeneratingImage = false;
+                    renderScreen();
+                };
+            }
+            const resultsGenerateAnalysisImageBtn = document.getElementById('results-generate-analysis-image-btn');
+            if (resultsGenerateAnalysisImageBtn) {
+                resultsGenerateAnalysisImageBtn.onclick = handleSaveResultsAsImage;
+            }
+            const resultsDownloadBtn = document.getElementById('results-download-btn');
+            if (resultsDownloadBtn) {
+                resultsDownloadBtn.onclick = () => {
+                    const imageUrlToDownload = appState.generatedImageResultsUrl || appState.uploadedImageUrl;
+                    if (imageUrlToDownload) {
+                        downloadImage(imageUrlToDownload, 'ai_gaze_output.png');
+                    } else {
+                        alert('沒有可下載的圖片。');
+                    }
+                };
+            }
+            const resultsShareFacebookBtn = document.getElementById('results-share-facebook-btn');
+            if (resultsShareFacebookBtn) {
+                resultsShareFacebookBtn.onclick = () => shareToFacebook(appState.lastAnalysisDescription);
+            }
+            const resultsShareInstagramBtn = document.getElementById('results-share-instagram-btn');
+            if (resultsShareInstagramBtn) {
+                resultsShareInstagramBtn.onclick = shareToInstagram;
+            }
+
+            // 反思頁面
+            const reflectionBackBtn = document.getElementById('reflection-back-btn');
+            if (reflectionBackBtn) {
+                reflectionBackBtn.onclick = () => {
+                    appState.currentScreen = 'results';
+                    renderScreen();
+                };
+            }
+            const generateImageBtn = document.getElementById('generate-image-btn');
+            if (generateImageBtn) {
+                generateImageBtn.onclick = handleGenerateReflectionImage;
+            }
+        }
+
+        // 當頁面載入完成時初始化應用程式
+        window.onload = renderScreen;
+    </script>
+</body>
+</html>
