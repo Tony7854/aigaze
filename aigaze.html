@@ -182,6 +182,16 @@
             renderScreen(); // 更新 UI 顯示載入狀態
 
             try {
+                // *** 請在這裡填入您的 Google Cloud API Key ***
+                // 範例：const apiKey = "YOUR_GOOGLE_CLOUD_API_KEY";
+                const apiKey = ""; // <--- 請替換為您的實際 API Key
+
+                if (!apiKey) {
+                    alert('請先在程式碼中填入您的 Google Cloud API Key 才能生成圖片！');
+                    console.error('API Key is missing for image generation.');
+                    return;
+                }
+
                 const prompts = [
                     "A surreal landscape inspired by repetitive patterns, vibrant colors",
                     "An abstract art piece reflecting detected anomalies, unsettling yet beautiful",
@@ -193,7 +203,6 @@
                 const randomPrompt = prompts[Math.floor(Math.random() * prompts.length)];
 
                 const payload = { instances: { prompt: randomPrompt }, parameters: { "sampleCount": 1} };
-                const apiKey = "" // Canvas 會自動提供 API Key
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
 
                 const response = await fetch(apiUrl, {
@@ -226,12 +235,21 @@
             renderScreen(); // 更新 UI 顯示載入狀態
 
             try {
+                // *** 請在這裡填入您的 Google Cloud API Key ***
+                // 範例：const apiKey = "YOUR_GOOGLE_CLOUD_API_KEY";
+                const apiKey = ""; // <--- 請替換為您的實際 API Key
+
+                if (!apiKey) {
+                    alert('請先在程式碼中填入您的 Google Cloud API Key 才能生成圖片！');
+                    console.error('API Key is missing for image generation.');
+                    return;
+                }
+
                 // 根據 AI 分析結果和原始圖片的性質來構建提示
                 // 為了演示，我們使用 AI 的分析描述來生成一張概念圖
                 const promptText = `Generate an artistic image based on the AI analysis of an image: "${appState.lastAnalysisDescription}". Focus on abstract representation, emphasizing the identified patterns, anomalies, or aesthetic qualities. The style should be vibrant and thought-provoking.`;
 
                 const payload = { instances: { prompt: promptText }, parameters: { "sampleCount": 1} };
-                const apiKey = "" // Canvas 會自動提供 API Key
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
 
                 const response = await fetch(apiUrl, {
