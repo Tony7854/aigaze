@@ -187,7 +187,7 @@
 
                 if (!apiKey) {
                     alert('請先在首頁填入您的 Google Cloud API Key 才能生成圖片！');
-                    console.error('API Key is missing for image generation.');
+                    console.error('API Key is missing for image generation. Please enter it on the home screen.');
                     appState.isGeneratingImage = false; // 停止載入狀態
                     renderScreen();
                     return;
@@ -212,17 +212,26 @@
                     body: JSON.stringify(payload)
                 });
 
+                if (!response.ok) { // 檢查 HTTP 狀態碼是否為 2xx
+                    const errorData = await response.json(); // 嘗試解析錯誤詳情
+                    console.error('API request failed for Reflection Image:', response.status, response.statusText, errorData);
+                    alert(`圖片生成失敗。錯誤碼: ${response.status}. 錯誤訊息: ${errorData.error?.message || '未知錯誤'}. 請檢查您的 API 金鑰和其權限。`);
+                    appState.isGeneratingImage = false; // 停止載入狀態
+                    renderScreen();
+                    return;
+                }
+
                 const result = await response.json();
                 if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
                     const imageUrl = `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
                     appState.generatedImageUrl = imageUrl;
                 } else {
-                    alert('圖片生成失敗，請稍後再試。');
-                    console.error('Image generation failed:', result);
+                    alert('圖片生成失敗，API 回應中沒有預期的圖片數據。');
+                    console.error('Image generation failed: No expected image data in API response for Reflection Image.', result);
                 }
             } catch (error) {
-                alert('圖片生成時發生錯誤。');
-                console.error('Error during image generation:', error);
+                alert('圖片生成時發生網路或解析錯誤。請檢查您的網路連接和控制台以獲取更多資訊。');
+                console.error('Error during image generation (network or parse error) for Reflection Image:', error);
             } finally {
                 appState.isGeneratingImage = false;
                 renderScreen(); // 更新 UI 顯示生成結果
@@ -240,7 +249,7 @@
 
                 if (!apiKey) {
                     alert('請先在首頁填入您的 Google Cloud API Key 才能生成圖片！');
-                    console.error('API Key is missing for image generation.');
+                    console.error('API Key is missing for image generation. Please enter it on the home screen.');
                     appState.isGeneratingImageResults = false; // 停止載入狀態
                     renderScreen();
                     return;
@@ -259,16 +268,25 @@
                     body: JSON.stringify(payload)
                 });
 
+                if (!response.ok) { // 檢查 HTTP 狀態碼是否為 2xx
+                    const errorData = await response.json(); // 嘗試解析錯誤詳情
+                    console.error('API request failed for Save Results Image:', response.status, response.statusText, errorData);
+                    alert(`根據分析結果生成圖片失敗。錯誤碼: ${response.status}. 錯誤訊息: ${errorData.error?.message || '未知錯誤'}. 請檢查您的 API 金鑰和其權限。`);
+                    appState.isGeneratingImageResults = false; // 停止載入狀態
+                    renderScreen();
+                    return;
+                }
+
                 const result = await response.json();
                 if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
                     appState.generatedImageResultsUrl = `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
                 } else {
-                    alert('根據分析結果生成圖片失敗，請稍後再試。');
-                    console.error('Image generation from results failed:', result);
+                    alert('根據分析結果生成圖片失敗，API 回應中沒有預期的圖片數據。');
+                    console.error('Image generation failed: No expected image data in API response for Save Results Image.', result);
                 }
             } catch (error) {
-                alert('根據分析結果生成圖片時發生錯誤。');
-                console.error('Error during image generation from results:', error);
+                alert('根據分析結果生成圖片時發生網路或解析錯誤。請檢查您的網路連接和控制台以獲取更多資訊。');
+                console.error('Error during image generation (network or parse error) for Save Results Image:', error);
             } finally {
                 appState.isGeneratingImageResults = false;
                 renderScreen(); // 更新 UI 顯示生成結果
