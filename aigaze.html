@@ -8,11 +8,11 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* 設定 Inter 字體 */
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap');
+        @import url('https://fonts:wght@300;400;600;700;800&display=swap');
         body {
             font-family: 'Inter', sans-serif;
             margin: 0; /* 確保 body 沒有額外邊距 */
-            overflow: hidden; /* 避免滾動條，如果背景完全覆蓋 */
+            /* 移除 overflow: hidden; 讓內容超出時可以捲動 */
         }
         /* 簡單的載入動畫 */
         @keyframes spin {
@@ -34,9 +34,10 @@
             background: none; 
         }
         .card {
-            background-color: #ffffff;
+            background-color: #ffffff; /* 您可以在這裡修改方塊的背景顏色，例如 transparent 或 rgba(255,255,255,0.8) */
             border-radius: 1rem; /* rounded-xl */
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); /* shadow-2xl */
+            /* 調整 box-shadow 讓它在透明背景下更柔和 */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
             padding: 2rem; /* p-8 */
             max-width: 48rem; /* max-w-2xl for results/reflection, max-w-lg for input, max-w-md for home */
             width: 100%;
@@ -53,6 +54,7 @@
             object-fit: cover; /* 圖片覆蓋整個容器，可能裁剪 */
             z-index: 0; /* 確保在所有內容之下 */
             opacity: 0.8; /* 稍微透明，讓文字更清晰 */
+            filter: blur(2px); /* 輕微模糊效果，讓前景內容更突出 */
         }
     </style>
 </head>
@@ -193,18 +195,16 @@
             return { annotations, description };
         }
 
-        // 處理反思頁面的圖片生成
+        // 處理反思頁面的圖片生成 (已禁用 API 呼叫)
         async function handleGenerateReflectionImage() {
-            // 提醒使用者圖片生成需要付費帳單
             alert('圖片生成功能需要啟用 Google Cloud 專案的付費帳單才能使用。');
             appState.isGeneratingImage = false; // 確保停止載入狀態
             renderScreen();
             return;
         }
 
-        // 新增：處理凝視結果頁面的「儲存分析結果並輸出圖片」
+        // 新增：處理凝視結果頁面的「儲存分析結果並輸出圖片」 (已禁用 API 呼叫)
         async function handleSaveResultsAsImage() {
-            // 提醒使用者圖片生成需要付費帳單
             alert('圖片生成功能需要啟用 Google Cloud 專案的付費帳單才能使用。');
             appState.isGeneratingImageResults = false; // 確保停止載入狀態
             renderScreen();
@@ -239,11 +239,13 @@
         // --- 渲染不同頁面的函數 ---
 
         function renderHomeScreen() {
-            // 背景圖片的 URL
-            const backgroundImageURL = "https://images.unsplash.com/photo-1579547621431-b4f74d084c6c?q=80&w=2000&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D";
+            // 新的背景圖片 URL，來自 Unsplash，具有科技感和抽象的圖案
+            // Credit: https://unsplash.com/photos/a-close-up-of-a-circuit-board-with-blue-lights-on-it-2S2wK_K91yU
+            const backgroundImageURL = "https://images.unsplash.com/photo-1596541223130-cf298075354b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1920&q=80";
+            // ▲▲▲ 您可以在這裡修改圖片連結 ▲▲▲
 
             return `
-                <img src="${backgroundImageURL}" alt="AI凝視概念背景" class="home-background">
+                <img src="${backgroundImageURL}" alt="我的AI凝視概念背景" class="home-background">
                 <div class="card max-w-md text-center relative z-10">
                     <h1 class="text-4xl font-extrabold text-gray-800 mb-6">我的AI凝視</h1>
                     <p class="text-lg text-gray-600 mb-8">透過AI的視角，重新發現圖像的奧秘。</p>
