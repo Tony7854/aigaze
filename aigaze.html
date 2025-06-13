@@ -61,7 +61,7 @@
             videoElement: null,
             canvasElement: null,
             mediaStream: null,
-            userApiKey: '' // 新增：用於儲存使用者輸入的 API Key
+            // userApiKey: '' // 移除 API Key，因為它會直接從 UI 移除
         };
 
         // DOM 引用
@@ -178,17 +178,25 @@
 
         // 處理反思頁面的圖片生成
         async function handleGenerateReflectionImage() {
+            // 提醒使用者圖片生成需要付費帳單
+            alert('圖片生成功能需要啟用 Google Cloud 專案的付費帳單才能使用。');
+            appState.isGeneratingImage = false; // 確保停止載入狀態
+            renderScreen();
+            return;
+
+            // 以下為原本的 API 呼叫邏輯，現在已禁用
+            /*
             appState.isGeneratingImage = true;
-            appState.generatedImageUrl = null; // 清除上次生成的圖片
-            renderScreen(); // 更新 UI 顯示載入狀態
+            appState.generatedImageUrl = null;
+            renderScreen();
 
             try {
-                const apiKey = appState.userApiKey; // 使用使用者輸入的 API Key
+                const apiKey = appState.userApiKey; // Using user provided API Key
 
                 if (!apiKey) {
                     alert('請先在首頁填入您的 Google Cloud API Key 才能生成圖片！');
                     console.error('API Key is missing for image generation. Please enter it on the home screen.');
-                    appState.isGeneratingImage = false; // 停止載入狀態
+                    appState.isGeneratingImage = false;
                     renderScreen();
                     return;
                 }
@@ -214,11 +222,11 @@
                     body: JSON.stringify(payload)
                 });
 
-                if (!response.ok) { // 檢查 HTTP 狀態碼是否為 2xx
-                    const errorData = await response.json(); // 嘗試解析錯誤詳情
+                if (!response.ok) {
+                    const errorData = await response.json();
                     console.error('API request failed for Reflection Image:', response.status, response.statusText, errorData);
                     alert(`圖片生成失敗。錯誤碼: ${response.status}. 錯誤訊息: ${errorData.error?.message || '未知錯誤'}. 請檢查您的 API 金鑰和其權限。`);
-                    appState.isGeneratingImage = false; // 停止載入狀態
+                    appState.isGeneratingImage = false;
                     renderScreen();
                     return;
                 }
@@ -236,23 +244,32 @@
                 console.error('Error during image generation (network or parse error) for Reflection Image:', error);
             } finally {
                 appState.isGeneratingImage = false;
-                renderScreen(); // 更新 UI 顯示生成結果
+                renderScreen();
             }
+            */
         }
 
         // 新增：處理凝視結果頁面的「儲存分析結果並輸出圖片」
         async function handleSaveResultsAsImage() {
+            // 提醒使用者圖片生成需要付費帳單
+            alert('圖片生成功能需要啟用 Google Cloud 專案的付費帳單才能使用。');
+            appState.isGeneratingImageResults = false; // 確保停止載入狀態
+            renderScreen();
+            return;
+
+            // 以下為原本的 API 呼叫邏輯，現在已禁用
+            /*
             appState.isGeneratingImageResults = true;
             appState.generatedImageResultsUrl = null;
-            renderScreen(); // 更新 UI 顯示載入狀態
+            renderScreen();
 
             try {
-                const apiKey = appState.userApiKey; // 使用使用者輸入的 API Key
+                const apiKey = appState.userApiKey; // Using user provided API Key
 
                 if (!apiKey) {
                     alert('請先在首頁填入您的 Google Cloud API Key 才能生成圖片！');
                     console.error('API Key is missing for image generation. Please enter it on the home screen.');
-                    appState.isGeneratingImageResults = false; // 停止載入狀態
+                    appState.isGeneratingImageResults = false;
                     renderScreen();
                     return;
                 }
@@ -260,7 +277,6 @@
 
 
                 // 根據 AI 分析結果和原始圖片的性質來構建提示
-                // 為了演示，我們使用 AI 的分析描述來生成一張概念圖
                 const promptText = `Generate an artistic image based on the AI analysis of an image: "${appState.lastAnalysisDescription}". Focus on abstract representation, emphasizing the identified patterns, anomalies, or aesthetic qualities. The style should be vibrant and thought-provoking.`;
 
                 const payload = { instances: { prompt: promptText }, parameters: { "sampleCount": 1} };
@@ -272,11 +288,11 @@
                     body: JSON.stringify(payload)
                 });
 
-                if (!response.ok) { // 檢查 HTTP 狀態碼是否為 2xx
-                    const errorData = await response.json(); // 嘗試解析錯誤詳情
+                if (!response.ok) {
+                    const errorData = await response.json();
                     console.error('API request failed for Save Results Image:', response.status, response.statusText, errorData);
                     alert(`根據分析結果生成圖片失敗。錯誤碼: ${response.status}. 錯誤訊息: ${errorData.error?.message || '未知錯誤'}. 請檢查您的 API 金鑰和其權限。`);
-                    appState.isGeneratingImageResults = false; // 停止載入狀態
+                    appState.isGeneratingImageResults = false;
                     renderScreen();
                     return;
                 }
@@ -293,8 +309,9 @@
                 console.error('Error during image generation (network or parse error) for Save Results Image:', error);
             } finally {
                 appState.isGeneratingImageResults = false;
-                renderScreen(); // 更新 UI 顯示生成結果
+                renderScreen();
             }
+            */
         }
 
         // 下載圖片功能
@@ -329,11 +346,6 @@
                 <div class="card max-w-md text-center">
                     <h1 class="text-4xl font-extrabold text-gray-800 mb-6">我的AI凝視</h1>
                     <p class="text-lg text-gray-600 mb-8">透過AI的視角，重新發現圖像的奧秘。</p>
-                    <div class="mb-6 w-full px-4">
-                        <label for="api-key-input" class="block text-left text-sm font-medium text-gray-700 mb-2">Google Cloud API Key:</label>
-                        <input type="text" id="api-key-input" value="${appState.userApiKey}" placeholder="在此貼上您的API金鑰" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700" autocomplete="off">
-                        <p class="text-xs text-gray-500 mt-2 text-left">此金鑰用於生成圖片。請確保它已被正確配置以訪問 Generative Language API。</p>
-                    </div>
                     <button id="start-gaze-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105">
                         開始凝視
                     </button>
@@ -473,8 +485,8 @@
                         <button id="results-reflect-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-lg transition duration-300 flex-grow">
                             反思分析結果
                         </button>
-                        <button id="results-generate-analysis-image-btn" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-6 rounded-lg transition duration-300 flex-grow ${appState.isGeneratingImageResults ? 'bg-gray-400 cursor-not-allowed' : ''}">
-                            ${appState.isGeneratingImageResults ? '生成中...' : '儲存分析結果並輸出圖片'}
+                        <button id="results-generate-analysis-image-btn" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-6 rounded-lg transition duration-300 flex-grow">
+                            儲存分析結果並輸出圖片
                         </button>
                         <button id="results-download-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition duration-300 flex-grow">
                             下載結果圖片
@@ -493,7 +505,7 @@
                         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mt-4"></div>
                     </div>
                     ` : ''}
-                    ${appState.generatedImageResultsUrl && !appState.isGeneratingImageResults ? `
+                    ${appState.generatedImageResultsUrl ? `
                     <div class="text-center mt-8 p-4 bg-gray-50 rounded-lg shadow-inner">
                         <h3 class="text-xl font-semibold text-gray-800 mb-4">根據分析結果生成的圖片：</h3>
                         <img src="${appState.generatedImageResultsUrl}" alt="根據分析結果生成的圖片" class="max-w-full h-auto rounded-lg shadow-md mx-auto" onerror="this.onerror=null;this.src='https://placehold.co/400x300/FF0000/FFFFFF?text=Image+Error';">
@@ -528,8 +540,8 @@
                         <button id="reflection-back-btn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-lg transition duration-300">
                             返回
                         </button>
-                        <button id="generate-image-btn" class="font-bold py-2 px-6 rounded-lg transition duration-300 ${appState.isGeneratingImage ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700 text-white'}">
-                            ${appState.isGeneratingImage ? '生成中...' : '儲存反思並輸出'}
+                        <button id="generate-image-btn" class="font-bold py-2 px-6 rounded-lg transition duration-300">
+                            儲存反思並輸出
                         </button>
                     </div>
 
@@ -539,7 +551,7 @@
                         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mt-4"></div>
                     </div>
                     ` : ''}
-                    ${appState.generatedImageUrl && !appState.isGeneratingImage ? `
+                    ${appState.generatedImageUrl ? `
                     <div class="text-center mt-8 p-4 bg-gray-50 rounded-lg shadow-inner">
                         <h3 class="text-xl font-semibold text-gray-800 mb-4">AI生成的靈感圖片：</h3>
                         <img src="${appState.generatedImageUrl}" alt="AI 生成的圖片" class="max-w-full h-auto rounded-lg shadow-md mx-auto" onerror="this.onerror=null;this.src='https://placehold.co/400x300/FF0000/FFFFFF?text=Image+Error';">
@@ -558,14 +570,11 @@
             stopCamera(); // 在切換頁面時停止攝影機
 
             // 重置非當前頁面相關的生成圖片狀態，避免混淆
-            if (appState.currentScreen !== 'reflection') {
-                appState.isGeneratingImage = false;
-                appState.generatedImageUrl = null;
-            }
-            if (appState.currentScreen !== 'results') { // 重置 results 頁面的生成圖片狀態
-                appState.isGeneratingImageResults = false;
-                appState.generatedImageResultsUrl = null;
-            }
+            appState.isGeneratingImage = false;
+            appState.generatedImageUrl = null;
+            appState.isGeneratingImageResults = false;
+            appState.generatedImageResultsUrl = null;
+
 
             let htmlContent = '';
             let currentCardClass = 'card '; // 基礎 card 類別
@@ -618,22 +627,11 @@
         function attachEventListeners() {
             // 首頁
             const startGazeBtn = document.getElementById('start-gaze-btn');
-            const apiKeyInput = document.getElementById('api-key-input'); // 獲取 API Key 輸入框
-            if (startGazeBtn && apiKeyInput) {
-                // 為了方便檢查，將初始的用戶輸入的 API Key 顯示在控制台
-                console.log('Initial API Key input value:', apiKeyInput.value);
-
+            if (startGazeBtn) {
                 startGazeBtn.onclick = () => {
-                    const enteredApiKey = apiKeyInput.value.trim();
-                    console.log('Entered API Key (trimmed):', enteredApiKey.substring(0, 5) + '...'); // Log first 5 chars
-                    if (enteredApiKey) {
-                        appState.userApiKey = enteredApiKey; // 儲存 API Key
-                        appState.currentScreen = 'input';
-                        appState.uploadedImageUrl = null;
-                        renderScreen();
-                    } else {
-                        alert('請在開始之前輸入您的 Google Cloud API Key！');
-                    }
+                    appState.currentScreen = 'input';
+                    appState.uploadedImageUrl = null;
+                    renderScreen();
                 };
             }
 
