@@ -11,6 +11,8 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap');
         body {
             font-family: 'Inter', sans-serif;
+            margin: 0; /* 確保 body 沒有額外邊距 */
+            overflow: hidden; /* 避免滾動條，如果背景完全覆蓋 */
         }
         /* 簡單的載入動畫 */
         @keyframes spin {
@@ -22,11 +24,14 @@
         }
         .app-container {
             min-height: 100vh;
-            background: linear-gradient(to bottom right, #e0f2f7, #e0e7fa); /* 漸變背景 */
             display: flex;
             justify-content: center;
             align-items: center;
             padding: 1rem;
+            position: relative; /* 讓內部絕對定位的元素可以參考 */
+            z-index: 1; /* 確保內容在背景之上 */
+            /* 移除原有的漸變背景，讓圖片背景生效 */
+            background: none; 
         }
         .card {
             background-color: #ffffff;
@@ -35,6 +40,19 @@
             padding: 2rem; /* p-8 */
             max-width: 48rem; /* max-w-2xl for results/reflection, max-w-lg for input, max-w-md for home */
             width: 100%;
+            position: relative; /* 確保卡片內容在其背景圖之上 */
+            z-index: 2; /* 確保卡片內容在背景之上 */
+        }
+        /* 新增背景圖片樣式 */
+        .home-background {
+            position: fixed; /* 固定背景，不隨滾動條滾動 */
+            top: 0;
+            left: 0;
+            width: 100vw; /* 覆蓋整個視口寬度 */
+            height: 100vh; /* 覆蓋整個視口高度 */
+            object-fit: cover; /* 圖片覆蓋整個容器，可能裁剪 */
+            z-index: 0; /* 確保在所有內容之下 */
+            opacity: 0.8; /* 稍微透明，讓文字更清晰 */
         }
     </style>
 </head>
@@ -61,7 +79,6 @@
             videoElement: null,
             canvasElement: null,
             mediaStream: null,
-            // userApiKey: '' // 移除 API Key，因為它會直接從 UI 移除
         };
 
         // DOM 引用
@@ -183,70 +200,6 @@
             appState.isGeneratingImage = false; // 確保停止載入狀態
             renderScreen();
             return;
-
-            // 以下為原本的 API 呼叫邏輯，現在已禁用
-            /*
-            appState.isGeneratingImage = true;
-            appState.generatedImageUrl = null;
-            renderScreen();
-
-            try {
-                const apiKey = appState.userApiKey; // Using user provided API Key
-
-                if (!apiKey) {
-                    alert('請先在首頁填入您的 Google Cloud API Key 才能生成圖片！');
-                    console.error('API Key is missing for image generation. Please enter it on the home screen.');
-                    appState.isGeneratingImage = false;
-                    renderScreen();
-                    return;
-                }
-                console.log('Using API Key for Reflection Image (first 5 chars):', apiKey.substring(0, 5) + '...');
-
-
-                const prompts = [
-                    "A surreal landscape inspired by repetitive patterns, vibrant colors",
-                    "An abstract art piece reflecting detected anomalies, unsettling yet beautiful",
-                    "A serene scene with perfect aesthetic composition, golden hour lighting",
-                    "A dynamic composition evoking strong emotions through color, expressive brushstrokes",
-                    "A futuristic cityscape with architectural details, glowing lights",
-                    "A close-up of natural textures with dramatic lighting, macro photography style"
-                ];
-                const randomPrompt = prompts[Math.floor(Math.random() * prompts.length)];
-
-                const payload = { instances: { prompt: randomPrompt }, parameters: { "sampleCount": 1} };
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
-
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    console.error('API request failed for Reflection Image:', response.status, response.statusText, errorData);
-                    alert(`圖片生成失敗。錯誤碼: ${response.status}. 錯誤訊息: ${errorData.error?.message || '未知錯誤'}. 請檢查您的 API 金鑰和其權限。`);
-                    appState.isGeneratingImage = false;
-                    renderScreen();
-                    return;
-                }
-
-                const result = await response.json();
-                if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
-                    const imageUrl = `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
-                    appState.generatedImageUrl = imageUrl;
-                } else {
-                    alert('圖片生成失敗，API 回應中沒有預期的圖片數據。');
-                    console.error('Image generation failed: No expected image data in API response for Reflection Image.', result);
-                }
-            } catch (error) {
-                alert('圖片生成時發生網路或解析錯誤。請檢查您的網路連接和控制台以獲取更多資訊。');
-                console.error('Error during image generation (network or parse error) for Reflection Image:', error);
-            } finally {
-                appState.isGeneratingImage = false;
-                renderScreen();
-            }
-            */
         }
 
         // 新增：處理凝視結果頁面的「儲存分析結果並輸出圖片」
@@ -256,62 +209,6 @@
             appState.isGeneratingImageResults = false; // 確保停止載入狀態
             renderScreen();
             return;
-
-            // 以下為原本的 API 呼叫邏輯，現在已禁用
-            /*
-            appState.isGeneratingImageResults = true;
-            appState.generatedImageResultsUrl = null;
-            renderScreen();
-
-            try {
-                const apiKey = appState.userApiKey; // Using user provided API Key
-
-                if (!apiKey) {
-                    alert('請先在首頁填入您的 Google Cloud API Key 才能生成圖片！');
-                    console.error('API Key is missing for image generation. Please enter it on the home screen.');
-                    appState.isGeneratingImageResults = false;
-                    renderScreen();
-                    return;
-                }
-                console.log('Using API Key for Save Results Image (first 5 chars):', apiKey.substring(0, 5) + '...');
-
-
-                // 根據 AI 分析結果和原始圖片的性質來構建提示
-                const promptText = `Generate an artistic image based on the AI analysis of an image: "${appState.lastAnalysisDescription}". Focus on abstract representation, emphasizing the identified patterns, anomalies, or aesthetic qualities. The style should be vibrant and thought-provoking.`;
-
-                const payload = { instances: { prompt: promptText }, parameters: { "sampleCount": 1} };
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
-
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    console.error('API request failed for Save Results Image:', response.status, response.statusText, errorData);
-                    alert(`根據分析結果生成圖片失敗。錯誤碼: ${response.status}. 錯誤訊息: ${errorData.error?.message || '未知錯誤'}. 請檢查您的 API 金鑰和其權限。`);
-                    appState.isGeneratingImageResults = false;
-                    renderScreen();
-                    return;
-                }
-
-                const result = await response.json();
-                if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
-                    appState.generatedImageResultsUrl = `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
-                } else {
-                    alert('根據分析結果生成圖片失敗，API 回應中沒有預期的圖片數據。');
-                    console.error('Image generation failed: No expected image data in API response for Save Results Image.', result);
-                }
-            } catch (error) {
-                alert('根據分析結果生成圖片時發生網路或解析錯誤。請檢查您的網路連接和控制台以獲取更多資訊。');
-                console.error('Error during image generation (network or parse error) for Save Results Image:', error);
-            } finally {
-                appState.isGeneratingImageResults = false;
-                renderScreen();
-            }
-            */
         }
 
         // 下載圖片功能
@@ -342,8 +239,12 @@
         // --- 渲染不同頁面的函數 ---
 
         function renderHomeScreen() {
+            // 背景圖片的 URL
+            const backgroundImageURL = "https://images.unsplash.com/photo-1579547621431-b4f74d084c6c?q=80&w=2000&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D";
+
             return `
-                <div class="card max-w-md text-center">
+                <img src="${backgroundImageURL}" alt="AI凝視概念背景" class="home-background">
+                <div class="card max-w-md text-center relative z-10">
                     <h1 class="text-4xl font-extrabold text-gray-800 mb-6">我的AI凝視</h1>
                     <p class="text-lg text-gray-600 mb-8">透過AI的視角，重新發現圖像的奧秘。</p>
                     <button id="start-gaze-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105">
@@ -611,6 +512,7 @@
                     currentCardClass += 'max-w-md text-center';
             }
 
+            // 將應用程式內容和卡片樣式應用到 appRoot
             appRoot.innerHTML = htmlContent;
             // 由於每次渲染都會替換內容，需要重新綁定事件監聽器
             attachEventListeners();
