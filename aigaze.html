@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>我的AI凝視 - HTML Web App</title>
     <!-- 導入 Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
     <style>
         /* 設定 Inter 字體 */
-        @import url('https://fonts:wght@300;400;600;700;800&display=swap');
+        @import url('[https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap](https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap)');
         body {
             font-family: 'Inter', sans-serif;
             margin: 0; /* 確保 body 沒有額外邊距 */
@@ -34,7 +34,7 @@
             background: none; 
         }
         .card {
-            background-color: transparent; /* 您可以在這裡修改方塊的背景顏色，例如 transparent 或 rgba(255,255,255,0.8) */
+            background-color: #ffffff; /* 您可以在這裡修改方塊的背景顏色，例如 transparent 或 rgba(255,255,255,0.8) */
             border-radius: 1rem; /* rounded-xl */
             /* 調整 box-shadow 讓它在透明背景下更柔和 */
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
@@ -69,7 +69,7 @@
             currentScreen: 'home', // 'home', 'input', 'cameraView', 'gazeMode', 'results', 'reflection'
             selectedGazeMode: '',
             uploadedImageUrl: null,
-            defaultPlaceholderImageUrl: "https://placehold.co/800x600/E0F2F7/2C3E50?text=Upload%20Your%20Image",
+            defaultPlaceholderImageUrl: "[https://placehold.co/800x600/E0F2F7/2C3E50?text=Upload%20Your%20Image](https://placehold.co/800x600/E0F2F7/2C3E50?text=Upload%20Your%20Image)",
             lastAnalysisDescription: '',
             // 反思頁面相關的圖片生成狀態
             generatedImageUrl: null,
@@ -239,13 +239,13 @@
         // --- 渲染不同頁面的函數 ---
 
         function renderHomeScreen() {
-            // 新的背景圖片 URL，來自 Unsplash，具有科技感和抽象的圖案
-            // Credit: https://unsplash.com/photos/a-close-up-of-a-circuit-board-with-blue-lights-on-it-2S2wK_K91yU
-            const backgroundImageURL = "https://drive.google.com/file/d/1AT1Taf1Ob3r-X3F2wOoNtNAv6ztD6CQr/view?usp=sharing";
-            // ▲▲▲ 您可以在這裡修改圖片連結 ▲▲▲
+            // 在這裡設置您的背景圖片路徑。
+            // 如果圖片放在 index.html 同一層，只需寫檔名，例如 "my_background.jpg"。
+            // 如果圖片放在 images/ 資料夾裡，請寫 "images/my_background.png"。
+            const backgroundImageURL = "下載2.png"; // <--- 請將這裡的圖片路徑替換成您自己的圖片路徑！
 
             return `
-                <img src="${backgroundImageURL}" alt="我的AI凝視概念背景" class="home-background">
+                <img src="${backgroundImageURL}" alt="我的AI凝視概念背景" class="home-background" onerror="this.onerror=null;this.src='[https://placehold.co/1920x1080/2c3e50/a6e3e9?text=Error%0ALoading%20Background](https://placehold.co/1920x1080/2c3e50/a6e3e9?text=Error%0ALoading%20Background)';" />
                 <div class="card max-w-md text-center relative z-10">
                     <h1 class="text-4xl font-extrabold text-gray-800 mb-6">我的AI凝視</h1>
                     <p class="text-lg text-gray-600 mb-8">透過AI的視角，重新發現圖像的奧秘。</p>
@@ -411,7 +411,7 @@
                     ${appState.generatedImageResultsUrl ? `
                     <div class="text-center mt-8 p-4 bg-gray-50 rounded-lg shadow-inner">
                         <h3 class="text-xl font-semibold text-gray-800 mb-4">根據分析結果生成的圖片：</h3>
-                        <img src="${appState.generatedImageResultsUrl}" alt="根據分析結果生成的圖片" class="max-w-full h-auto rounded-lg shadow-md mx-auto" onerror="this.onerror=null;this.src='https://placehold.co/400x300/FF0000/FFFFFF?text=Image+Error';">
+                        <img src="${appState.generatedImageResultsUrl}" alt="根據分析結果生成的圖片" class="max-w-full h-auto rounded-lg shadow-md mx-auto" onerror="this.onerror=null;this.src='[https://placehold.co/400x300/FF0000/FFFFFF?text=Image+Error](https://placehold.co/400x300/FF0000/FFFFFF?text=Image+Error)';">
                         <p class="text-sm text-gray-500 mt-2">這張圖片是根據AI分析結果所生成的。</p>
                     </div>
                     ` : ''}
@@ -457,7 +457,7 @@
                     ${appState.generatedImageUrl ? `
                     <div class="text-center mt-8 p-4 bg-gray-50 rounded-lg shadow-inner">
                         <h3 class="text-xl font-semibold text-gray-800 mb-4">AI生成的靈感圖片：</h3>
-                        <img src="${appState.generatedImageUrl}" alt="AI 生成的圖片" class="max-w-full h-auto rounded-lg shadow-md mx-auto" onerror="this.onerror=null;this.src='https://placehold.co/400x300/FF0000/FFFFFF?text=Image+Error';">
+                        <img src="${appState.generatedImageUrl}" alt="AI 生成的圖片" class="max-w-full h-auto rounded-lg shadow-md mx-auto" onerror="this.onerror=null;this.src='[https://placehold.co/400x300/FF0000/FFFFFF?text=Image+Error](https://placehold.co/400x300/FF0000/FFFFFF?text=Image+Error)';">
                         <p class="text-sm text-gray-500 mt-2">這張圖片是根據您的反思提示隨機生成的。</p>
                     </div>
                     ` : ''}
