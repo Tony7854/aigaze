@@ -184,11 +184,11 @@
             try {
                 // *** 請在這裡填入您的 Google Cloud API Key ***
                 // 範例：const apiKey = "YOUR_GOOGLE_CLOUD_API_KEY_HERE";
-                const apiKey = "AIzaSyCNg5Eh0Z_eOleaZJrec2ZnRoDEbPypQR8"; // <--- 請將這裡的空字串替換為您的實際 API Key
+                const apiKey = "AIzaSyCNg5Eh0Z_eOleaZJrec2ZnRoDEbPypQR8"; // <--- 請將這裡替換為您的實際 API Key
 
-                if (!apiKey) {
+                if (apiKey === "YOUR_API_KEY_HERE" || !apiKey) {
                     alert('請先在程式碼中填入您的 Google Cloud API Key 才能生成圖片！');
-                    console.error('API Key is missing for image generation.');
+                    console.error('API Key is missing or is the placeholder for image generation.');
                     appState.isGeneratingImage = false; // 停止載入狀態
                     renderScreen();
                     return;
@@ -239,11 +239,11 @@
             try {
                 // *** 請在這裡填入您的 Google Cloud API Key ***
                 // 範例：const apiKey = "YOUR_GOOGLE_CLOUD_API_KEY_HERE";
-                const apiKey = "AIzaSyCNg5Eh0Z_eOleaZJrec2ZnRoDEbPypQR8"; // <--- 請將這裡的空字串替換為您的實際 API Key
+                const apiKey = "AIzaSyCNg5Eh0Z_eOleaZJrec2ZnRoDEbPypQR8"; // <--- 請將這裡替換為您的實際 API Key
 
-                if (!apiKey) {
+                if (apiKey === "YOUR_API_KEY_HERE" || !apiKey) {
                     alert('請先在程式碼中填入您的 Google Cloud API Key 才能生成圖片！');
-                    console.error('API Key is missing for image generation.');
+                    console.error('API Key is missing or is the placeholder for image generation.');
                     appState.isGeneratingImageResults = false; // 停止載入狀態
                     renderScreen();
                     return;
