@@ -5,15 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>我的AI凝視 - HTML Web App</title>
     <!-- 導入 Tailwind CSS -->
-    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* 設定 Inter 字體 */
-        @import url('[https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap](https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap)');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap');
+        
+        /* 確保 html 和 body 佔滿整個視口高度 */
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+
         body {
             font-family: 'Inter', sans-serif;
-            margin: 0; /* 確保 body 沒有額外邊距 */
-            /* 移除 overflow: hidden; 讓內容超出時可以捲動 */
+            /* 將背景圖片直接應用於 body */
+            background-image: url('下載2.png'); /* <--- 請確保您的圖片位於這裡的路徑 */
+            background-size: cover; /* 圖片覆蓋整個區域 */
+            background-position: center; /* 圖片居中 */
+            background-attachment: fixed; /* 圖片固定不動，不隨滾動條滾動 */
+            background-repeat: no-repeat; /* 不重複圖片 */
+            opacity: 0.8; /* 稍微透明，讓前景內容更突出 */
+            /* filter: blur(2px); /* 輕微模糊效果 - 已移除 */ */
+            /* 移除之前可能導致問題的 overflow: hidden; */
         }
+
         /* 簡單的載入動畫 */
         @keyframes spin {
             0% { transform: rotate(0deg); }
@@ -22,19 +37,19 @@
         .animate-spin {
             animation: spin 1s linear infinite;
         }
+
         .app-container {
-            min-height: 100vh;
+            min-height: 100vh; /* 確保應用容器至少佔滿整個視口高度 */
             display: flex;
             justify-content: center;
             align-items: center;
             padding: 1rem;
-            position: relative; /* 讓內部絕對定位的元素可以參考 */
+            position: relative; /* 保持相對定位 */
             z-index: 1; /* 確保內容在背景之上 */
-            /* 移除原有的漸變背景，讓圖片背景生效 */
-            background: none; 
+            background: none; /* 移除漸變背景，因為圖片現在在 body 上 */
         }
         .card {
-            background-color: #ffffff; /* 您可以在這裡修改方塊的背景顏色，例如 transparent 或 rgba(255,255,255,0.8) */
+            background-color:transparent; /* 您可以在這裡修改方塊的背景顏色，例如 transparent 或 rgba(255,255,255,0.8) */
             border-radius: 1rem; /* rounded-xl */
             /* 調整 box-shadow 讓它在透明背景下更柔和 */
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
@@ -43,18 +58,6 @@
             width: 100%;
             position: relative; /* 確保卡片內容在其背景圖之上 */
             z-index: 2; /* 確保卡片內容在背景之上 */
-        }
-        /* 新增背景圖片樣式 */
-        .home-background {
-            position: fixed; /* 固定背景，不隨滾動條滾動 */
-            top: 0;
-            left: 0;
-            width: 100vw; /* 覆蓋整個視口寬度 */
-            height: 100vh; /* 覆蓋整個視口高度 */
-            object-fit: cover; /* 圖片覆蓋整個容器，可能裁剪 */
-            z-index: 0; /* 確保在所有內容之下 */
-            opacity: 0.8; /* 稍微透明，讓文字更清晰 */
-            filter: blur(2px); /* 輕微模糊效果，讓前景內容更突出 */
         }
     </style>
 </head>
@@ -69,7 +72,7 @@
             currentScreen: 'home', // 'home', 'input', 'cameraView', 'gazeMode', 'results', 'reflection'
             selectedGazeMode: '',
             uploadedImageUrl: null,
-            defaultPlaceholderImageUrl: "[https://placehold.co/800x600/E0F2F7/2C3E50?text=Upload%20Your%20Image](https://placehold.co/800x600/E0F2F7/2C3E50?text=Upload%20Your%20Image)",
+            defaultPlaceholderImageUrl: "https://placehold.co/800x600/E0F2F7/2C3E50?text=Upload%20Your%20Image",
             lastAnalysisDescription: '',
             // 反思頁面相關的圖片生成狀態
             generatedImageUrl: null,
@@ -239,13 +242,8 @@
         // --- 渲染不同頁面的函數 ---
 
         function renderHomeScreen() {
-            // 在這裡設置您的背景圖片路徑。
-            // 如果圖片放在 index.html 同一層，只需寫檔名，例如 "my_background.jpg"。
-            // 如果圖片放在 images/ 資料夾裡，請寫 "images/my_background.png"。
-            const backgroundImageURL = "下載2.png"; // <--- 請將這裡的圖片路徑替換成您自己的圖片路徑！
-
+            // 背景圖片現在通過 body 的 CSS 載入，這裡不再需要 img 標籤
             return `
-                <img src="${backgroundImageURL}" alt="我的AI凝視概念背景" class="home-background" onerror="this.onerror=null;this.src='[https://placehold.co/1920x1080/2c3e50/a6e3e9?text=Error%0ALoading%20Background](https://placehold.co/1920x1080/2c3e50/a6e3e9?text=Error%0ALoading%20Background)';" />
                 <div class="card max-w-md text-center relative z-10">
                     <h1 class="text-4xl font-extrabold text-gray-800 mb-6">我的AI凝視</h1>
                     <p class="text-lg text-gray-600 mb-8">透過AI的視角，重新發現圖像的奧秘。</p>
@@ -411,7 +409,7 @@
                     ${appState.generatedImageResultsUrl ? `
                     <div class="text-center mt-8 p-4 bg-gray-50 rounded-lg shadow-inner">
                         <h3 class="text-xl font-semibold text-gray-800 mb-4">根據分析結果生成的圖片：</h3>
-                        <img src="${appState.generatedImageResultsUrl}" alt="根據分析結果生成的圖片" class="max-w-full h-auto rounded-lg shadow-md mx-auto" onerror="this.onerror=null;this.src='[https://placehold.co/400x300/FF0000/FFFFFF?text=Image+Error](https://placehold.co/400x300/FF0000/FFFFFF?text=Image+Error)';">
+                        <img src="${appState.generatedImageResultsUrl}" alt="根據分析結果生成的圖片" class="max-w-full h-auto rounded-lg shadow-md mx-auto" onerror="this.onerror=null;this.src='https://placehold.co/400x300/FF0000/FFFFFF?text=Image+Error';" />
                         <p class="text-sm text-gray-500 mt-2">這張圖片是根據AI分析結果所生成的。</p>
                     </div>
                     ` : ''}
@@ -457,7 +455,7 @@
                     ${appState.generatedImageUrl ? `
                     <div class="text-center mt-8 p-4 bg-gray-50 rounded-lg shadow-inner">
                         <h3 class="text-xl font-semibold text-gray-800 mb-4">AI生成的靈感圖片：</h3>
-                        <img src="${appState.generatedImageUrl}" alt="AI 生成的圖片" class="max-w-full h-auto rounded-lg shadow-md mx-auto" onerror="this.onerror=null;this.src='[https://placehold.co/400x300/FF0000/FFFFFF?text=Image+Error](https://placehold.co/400x300/FF0000/FFFFFF?text=Image+Error)';">
+                        <img src="${appState.generatedImageUrl}" alt="AI 生成的圖片" class="max-w-full h-auto rounded-lg shadow-md mx-auto" onerror="this.onerror=null;this.src='https://placehold.co/400x300/FF0000/FFFFFF?text=Image+Error';" />
                         <p class="text-sm text-gray-500 mt-2">這張圖片是根據您的反思提示隨機生成的。</p>
                     </div>
                     ` : ''}
