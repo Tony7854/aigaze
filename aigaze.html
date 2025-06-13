@@ -19,14 +19,13 @@
         body {
             font-family: 'Inter', sans-serif;
             /* 將背景圖片直接應用於 body */
-            background-image: url('下載2.png'); /* <--- 請確保您的圖片位於這裡的路徑 */
+            background-image: url('IMG_4288.jpg'); /* <--- 請確保您的圖片位於這裡的路徑 */
             background-size: cover; /* 圖片覆蓋整個區域 */
             background-position: center; /* 圖片居中 */
             background-attachment: fixed; /* 圖片固定不動，不隨滾動條滾動 */
             background-repeat: no-repeat; /* 不重複圖片 */
             opacity: 0.8; /* 稍微透明，讓前景內容更突出 */
             /* filter: blur(2px); /* 輕微模糊效果 - 已移除 */ */
-            /* 移除之前可能導致問題的 overflow: hidden; */
         }
 
         /* 簡單的載入動畫 */
@@ -47,9 +46,10 @@
             position: relative; /* 保持相對定位 */
             z-index: 1; /* 確保內容在背景之上 */
             background: none; /* 移除漸變背景，因為圖片現在在 body 上 */
+            overflow-y: auto; /* 允許垂直捲動，以防內容超出螢幕 */
         }
         .card {
-            background-color:transparent; /* 您可以在這裡修改方塊的背景顏色，例如 transparent 或 rgba(255,255,255,0.8) */
+            background-color: transparent; /* 您可以在這裡修改方塊的背景顏色，例如 transparent 或 rgba(255,255,255,0.8) */
             border-radius: 1rem; /* rounded-xl */
             /* 調整 box-shadow 讓它在透明背景下更柔和 */
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
@@ -78,8 +78,8 @@
             generatedImageUrl: null,
             isGeneratingImage: false,
             // 結果頁面相關的圖片生成狀態
-            generatedImageResultsUrl: null, // 新增：用於結果頁面生成的圖片
-            isGeneratingImageResults: false, // 新增：用於結果頁面圖片生成中的狀態
+            generatedImageResultsUrl: null, 
+            isGeneratingImageResults: false, 
             // 攝影機相關 DOM 引用
             videoElement: null,
             canvasElement: null,
@@ -206,15 +206,136 @@
             return;
         }
 
-        // 新增：處理凝視結果頁面的「儲存分析結果並輸出圖片」 (已禁用 API 呼叫)
-        async function handleSaveResultsAsImage() {
-            alert('圖片生成功能需要啟用 Google Cloud 專案的付費帳單才能使用。');
-            appState.isGeneratingImageResults = false; // 確保停止載入狀態
-            renderScreen();
-            return;
+        // 新增：根據分析結果生成並下載帶有標示和說明的圖片
+        async function generateAndDownloadAnnotatedImage() {
+            if (!appState.uploadedImageUrl) {
+                alert('沒有圖片可以下載！');
+                return;
+            }
+
+            appState.isGeneratingImageResults = true; // 設置載入狀態
+            renderScreen(); // 重新渲染以顯示載入提示
+
+            try {
+                const img = new Image();
+                img.src = appState.uploadedImageUrl;
+                img.crossOrigin = 'anonymous'; // 處理跨域圖片，如果圖片來自不同域名
+
+                img.onload = () => {
+                    // 根據圖片的原始尺寸創建 Canvas
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+
+                    // 確保 canvas 尺寸與圖片一致
+                    canvas.width = img.naturalWidth;
+                    canvas.height = img.naturalHeight;
+
+                    // 繪製原始圖片
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                    // 獲取當前凝視模式的分析數據
+                    const { annotations, description } = getAnalysisData(appState.selectedGazeMode);
+
+                    // 繪製所有標示
+                    annotations.forEach(anno => {
+                        ctx.strokeStyle = anno.color;
+                        ctx.fillStyle = anno.color;
+                        ctx.lineWidth = 3;
+                        ctx.globalAlpha = 0.5; // 設置半透明
+
+                        if (anno.type === 'rect') {
+                            ctx.strokeRect(anno.x, anno.y, anno.width, anno.height);
+                        } else if (anno.type === 'circle') {
+                            ctx.beginPath();
+                            ctx.arc(anno.x, anno.y, anno.radius, 0, Math.PI * 2);
+                            ctx.stroke();
+                        } else if (anno.type === 'line') {
+                            ctx.beginPath();
+                            ctx.moveTo(anno.x1, anno.y1);
+                            ctx.lineTo(anno.x2, anno.y2);
+                            ctx.setLineDash([5, 5]); // 虛線
+                            ctx.stroke();
+                            ctx.setLineDash([]); // 重置虛線
+                        } else if (anno.type === 'text' && anno.label) { // 繪製標籤
+                            ctx.globalAlpha = 0.8;
+                            ctx.font = 'bold 24px Inter'; // 字體大小和樣式
+                            ctx.fillStyle = '#FFFFFF'; // 文字顏色
+                            // 計算文字背景框的尺寸
+                            const textMetrics = ctx.measureText(anno.label);
+                            const textWidth = textMetrics.width;
+                            const textHeight = parseInt(ctx.font, 10); // 簡單估計行高
+                            const padding = 10;
+                            const bgX = anno.x;
+                            const bgY = anno.y - textHeight - padding; // 標籤在方塊上方
+
+                            // 繪製文字背景
+                            ctx.fillStyle = 'rgba(0, 0, 0, 0.6)'; // 半透明黑色背景
+                            ctx.fillRect(bgX, bgY, textWidth + padding * 2, textHeight + padding * 2);
+
+                            // 繪製文字
+                            ctx.fillStyle = '#FFFFFF';
+                            ctx.fillText(anno.label, bgX + padding, bgY + textHeight + padding/2);
+                        }
+                    });
+
+                    // 繪製說明文字（在圖片底部）
+                    ctx.globalAlpha = 0.9; // 稍微不透明
+                    ctx.font = '24px Inter'; // 字體大小
+                    ctx.fillStyle = '#FFFFFF'; // 文字顏色
+
+                    const descriptionLines = [];
+                    const maxLineWidth = canvas.width - 40; // 邊距
+                    let currentLine = '';
+                    const words = description.split(' ');
+                    
+                    for (let i = 0; i < words.length; i++) {
+                        const testLine = currentLine + words[i] + ' ';
+                        const testWidth = ctx.measureText(testLine).width;
+                        if (testWidth > maxLineWidth && i > 0) {
+                            descriptionLines.push(currentLine.trim());
+                            currentLine = words[i] + ' ';
+                        } else {
+                            currentLine = testLine;
+                        }
+                    }
+                    descriptionLines.push(currentLine.trim()); // 添加最後一行
+
+                    const lineHeight = 30; // 每行的高度
+                    const totalTextHeight = descriptionLines.length * lineHeight;
+                    const textPadding = 20;
+
+                    // 繪製說明文字的背景
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'; // 深色半透明背景
+                    ctx.fillRect(0, canvas.height - totalTextHeight - textPadding * 2, canvas.width, totalTextHeight + textPadding * 2);
+
+                    // 繪製說明文字
+                    ctx.fillStyle = '#FFFFFF';
+                    descriptionLines.forEach((line, index) => {
+                        ctx.fillText(line, 20, canvas.height - totalTextHeight - textPadding + (index + 1) * lineHeight);
+                    });
+
+                    // 將 Canvas 內容轉換為圖片 URL 並下載
+                    const dataURL = canvas.toDataURL('image/png');
+                    downloadImage(dataURL, `ai_gaze_analysis_${appState.selectedGazeMode}.png`);
+
+                    appState.isGeneratingImageResults = false; // 結束載入狀態
+                    renderScreen();
+                };
+
+                img.onerror = () => {
+                    alert('載入原始圖片失敗，無法生成帶有分析結果的圖片。');
+                    appState.isGeneratingImageResults = false;
+                    renderScreen();
+                };
+            } catch (error) {
+                console.error('生成帶有分析結果的圖片時發生錯誤:', error);
+                alert('生成圖片時發生錯誤。請檢查控制台。');
+                appState.isGeneratingImageResults = false;
+                renderScreen();
+            }
         }
 
-        // 下載圖片功能
+        // 下載圖片功能 (此函數現在被 generateAndDownloadAnnotatedImage 調用)
         function downloadImage(imageUrl, filename) {
             const link = document.createElement('a');
             link.href = imageUrl;
@@ -346,6 +467,7 @@
         function renderResultsScreen() {
             const { annotations, description } = getAnalysisData(appState.selectedGazeMode);
 
+            // AI分析結果頁面中，原始圖片上的 SVG 標示
             const svgAnnotations = annotations.map((anno, index) => {
                 if (anno.type === 'rect') {
                     return `<rect x="${anno.x}" y="${anno.y}" width="${anno.width}" height="${anno.height}" fill="${anno.color}" fill-opacity="0.2" stroke="${anno.color}" stroke-width="2" class="transition-all duration-500 ease-in-out"></rect>`;
@@ -386,11 +508,8 @@
                         <button id="results-reflect-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-lg transition duration-300 flex-grow">
                             反思分析結果
                         </button>
-                        <button id="results-generate-analysis-image-btn" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-6 rounded-lg transition duration-300 flex-grow">
-                            儲存分析結果並輸出圖片
-                        </button>
-                        <button id="results-download-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition duration-300 flex-grow">
-                            下載結果圖片
+                        <button id="results-download-annotated-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition duration-300 flex-grow">
+                            下載帶有AI分析的圖片
                         </button>
                         <button id="results-share-facebook-btn" class="bg-blue-800 hover:bg-blue-900 text-white font-bold py-2 px-6 rounded-lg transition duration-300 flex-grow">
                             分享到 Facebook
@@ -402,17 +521,11 @@
 
                     ${appState.isGeneratingImageResults ? `
                     <div class="text-center mt-8">
-                        <p class="text-gray-600">根據分析結果生成圖片中，請稍候...</p>
+                        <p class="text-gray-600">正在生成圖片中，請稍候...</p>
                         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mt-4"></div>
                     </div>
                     ` : ''}
-                    ${appState.generatedImageResultsUrl ? `
-                    <div class="text-center mt-8 p-4 bg-gray-50 rounded-lg shadow-inner">
-                        <h3 class="text-xl font-semibold text-gray-800 mb-4">根據分析結果生成的圖片：</h3>
-                        <img src="${appState.generatedImageResultsUrl}" alt="根據分析結果生成的圖片" class="max-w-full h-auto rounded-lg shadow-md mx-auto" onerror="this.onerror=null;this.src='https://placehold.co/400x300/FF0000/FFFFFF?text=Image+Error';" />
-                        <p class="text-sm text-gray-500 mt-2">這張圖片是根據AI分析結果所生成的。</p>
-                    </div>
-                    ` : ''}
+                    
                 </div>
             `;
         }
@@ -423,7 +536,7 @@
                     <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">反思AI凝視</h2>
 
                     <div class="text-center mb-6">
-                        <img src="${appState.uploadedImageUrl || appState.defaultPlaceholderImageUrl}" alt="您的圖片" class="max-w-full h-auto rounded-lg shadow-md mx-auto" onerror="this.onerror=null;this.src='${appState.defaultPlaceholderImageUrl}';" />
+                        <img src="${appState.uploadedImageUrl || appState.defaultPlaceholderImageUrl}" alt="您的圖片" class="max-w-full h-auto rounded-lg shadow-md mx-auto" onerror="this.onerror=null;this.src='https://placehold.co/400x300/FF0000/FFFFFF?text=Image+Error';" />
                     </div>
 
                     <div class="bg-gray-50 p-4 rounded-lg mb-6 shadow-inner">
@@ -642,21 +755,17 @@
                     renderScreen();
                 };
             }
-            const resultsGenerateAnalysisImageBtn = document.getElementById('results-generate-analysis-image-btn');
-            if (resultsGenerateAnalysisImageBtn) {
-                resultsGenerateAnalysisImageBtn.onclick = handleSaveResultsAsImage;
+            // 新的合併按鈕
+            const resultsDownloadAnnotatedBtn = document.getElementById('results-download-annotated-btn');
+            if (resultsDownloadAnnotatedBtn) {
+                resultsDownloadAnnotatedBtn.onclick = generateAndDownloadAnnotatedImage;
             }
-            const resultsDownloadBtn = document.getElementById('results-download-btn');
+            // 舊的下載按鈕 (如果還存在於其他地方，雖然理論上應該被新按鈕取代)
+            const resultsDownloadBtn = document.getElementById('results-download-btn'); 
             if (resultsDownloadBtn) {
-                resultsDownloadBtn.onclick = () => {
-                    const imageUrlToDownload = appState.generatedImageResultsUrl || appState.uploadedImageUrl;
-                    if (imageUrlToDownload) {
-                        downloadImage(imageUrlToDownload, 'ai_gaze_output.png');
-                    } else {
-                        alert('沒有可下載的圖片。');
-                    }
-                };
+                resultsDownloadBtn.onclick = generateAndDownloadAnnotatedImage; // 將其也指向新的功能
             }
+
             const resultsShareFacebookBtn = document.getElementById('results-share-facebook-btn');
             if (resultsShareFacebookBtn) {
                 resultsShareFacebookBtn.onclick = () => shareToFacebook(appState.lastAnalysisDescription);
