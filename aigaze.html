@@ -192,6 +192,8 @@
                     renderScreen();
                     return;
                 }
+                console.log('Using API Key for Reflection Image (first 5 chars):', apiKey.substring(0, 5) + '...');
+
 
                 const prompts = [
                     "A surreal landscape inspired by repetitive patterns, vibrant colors",
@@ -254,6 +256,8 @@
                     renderScreen();
                     return;
                 }
+                console.log('Using API Key for Save Results Image (first 5 chars):', apiKey.substring(0, 5) + '...');
+
 
                 // 根據 AI 分析結果和原始圖片的性質來構建提示
                 // 為了演示，我們使用 AI 的分析描述來生成一張概念圖
@@ -327,7 +331,7 @@
                     <p class="text-lg text-gray-600 mb-8">透過AI的視角，重新發現圖像的奧秘。</p>
                     <div class="mb-6 w-full px-4">
                         <label for="api-key-input" class="block text-left text-sm font-medium text-gray-700 mb-2">Google Cloud API Key:</label>
-                        <input type="password" id="api-key-input" value="${appState.userApiKey}" placeholder="在此貼上您的API金鑰" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700" autocomplete="off">
+                        <input type="text" id="api-key-input" value="${appState.userApiKey}" placeholder="在此貼上您的API金鑰" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700" autocomplete="off">
                         <p class="text-xs text-gray-500 mt-2 text-left">此金鑰用於生成圖片。請確保它已被正確配置以訪問 Generative Language API。</p>
                     </div>
                     <button id="start-gaze-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105">
@@ -616,8 +620,12 @@
             const startGazeBtn = document.getElementById('start-gaze-btn');
             const apiKeyInput = document.getElementById('api-key-input'); // 獲取 API Key 輸入框
             if (startGazeBtn && apiKeyInput) {
+                // 為了方便檢查，將初始的用戶輸入的 API Key 顯示在控制台
+                console.log('Initial API Key input value:', apiKeyInput.value);
+
                 startGazeBtn.onclick = () => {
                     const enteredApiKey = apiKeyInput.value.trim();
+                    console.log('Entered API Key (trimmed):', enteredApiKey.substring(0, 5) + '...'); // Log first 5 chars
                     if (enteredApiKey) {
                         appState.userApiKey = enteredApiKey; // 儲存 API Key
                         appState.currentScreen = 'input';
