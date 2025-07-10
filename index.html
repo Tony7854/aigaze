@@ -1,0 +1,702 @@
+﻿<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>《墨立方流韻》數位藝術體驗</title>
+    <!-- 引入 Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Inter 字體 -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Tailwind CSS 動畫定義 */
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0) translateX(0) rotate(0deg);
+            }
+
+            25% {
+                transform: translateY(-8px) translateX(8px) rotate(5deg);
+            }
+
+            50% {
+                transform: translateY(0) translateX(0) rotate(0deg);
+            }
+
+            75% {
+                transform: translateY(8px) translateX(-8px) rotate(-5deg);
+            }
+        }
+
+        @keyframes grow-fade {
+            0% {
+                opacity: 0;
+                transform: scale(0.5);
+                filter: blur(10px);
+            }
+
+            100% {
+                opacity: 1;
+                transform: scale(1);
+                filter: blur(0px);
+            }
+        }
+
+        @keyframes layer-shift {
+            0%, 100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-15px);
+            }
+        }
+
+        @keyframes final-form {
+            0% {
+                transform: scale(0.9);
+                opacity: 0.8;
+                filter: brightness(0.5);
+            }
+
+            100% {
+                opacity: 1;
+                filter: brightness(1);
+            }
+        }
+
+        @keyframes brush-fade {
+            0% {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            20% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+
+            80% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+
+            100% {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+        }
+
+        @keyframes pulse-once {
+            0% {
+                transform: scale(0.1);
+                opacity: 0.5;
+            }
+
+            100% {
+                transform: scale(1.5);
+                opacity: 0;
+            }
+        }
+
+        @keyframes fade-in-out {
+            0% {
+                opacity: 0;
+            }
+
+            10% {
+                opacity: 1;
+            }
+
+            90% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0;
+            }
+        }
+
+        .animate-float {
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .animate-grow-fade {
+            animation: grow-fade 1.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+        }
+
+        .animate-layer-shift {
+            animation: layer-shift 4s ease-in-out infinite;
+        }
+
+        .animate-final-form {
+            animation: final-form 2.5s ease-in-out forwards;
+        }
+
+        .animate-brush-fade {
+            animation: brush-fade 6s ease-in-out forwards;
+        }
+
+        .animate-pulse-once {
+            animation: pulse-once 0.8s ease-out forwards;
+        }
+
+        .animate-fade-in-out {
+            animation: fade-in-out 3s ease-in-out forwards;
+        }
+
+        /* Custom background pattern for the main container */
+        .bg-zinc-950 {
+            background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.05) 1px, transparent 0);
+            background-size: 20px 20px;
+        }
+
+        /* Fullscreen Masterpiece specific styles */
+        .fullscreen-masterpiece-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #0c0c0d; /* Deep charcoal similar to bg-zinc-950 */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            z-index: 50;
+        }
+
+        .fullscreen-masterpiece-image {
+            max-width: 100%;
+            max-height: 80vh; /* Adjust as needed for mobile vs desktop */
+            object-fit: contain;
+            border-radius: 0.5rem; /* rounded-lg */
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5), 0 0 40px rgba(100,0,255,0.2); /* shadow-xl, custom glow */
+            border: 1px solid #4a5568; /* border-gray-700 */
+        }
+
+        .fullscreen-masterpiece-button {
+            margin-top: 2rem; /* mt-8 */
+            padding: 1rem 2rem; /* px-8 py-4 */
+            background: linear-gradient(to right, #4c51bf, #805ad5); /* from-blue-600 to-purple-600 */
+            color: white;
+            font-weight: bold;
+            font-size: 1.25rem; /* text-xl */
+            border-radius: 9999px; /* rounded-full */
+            box-shadow: 0 10px 15px rgba(0,0,0,0.3); /* shadow-lg */
+            transition: all 0.3s ease-in-out;
+            cursor: pointer;
+            border: none;
+        }
+
+            .fullscreen-masterpiece-button:hover {
+                background: linear-gradient(to right, #434190, #6b46c1); /* hover:from-blue-700 hover:to-purple-700 */
+                transform: scale(1.05);
+            }
+
+            .fullscreen-masterpiece-button:focus {
+                outline: none;
+                box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.5); /* focus:ring-4 focus:ring-blue-500 focus:ring-opacity-50 */
+            }
+    </style>
+</head>
+<body class="min-h-screen bg-zinc-950 text-white flex flex-col items-center justify-center p-4 selection:bg-purple-500 selection:text-white">
+
+    <h1 class="text-4xl md:text-5xl font-extrabold mb-8 text-center bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600 drop-shadow-lg">
+        《墨立方流韻》數位藝術體驗
+    </h1>
+
+    <div id="message-display" class="bg-blue-600 text-white p-3 rounded-lg mb-6 shadow-xl animate-fade-in-out hidden"></div>
+
+    <!-- 主應用程式內容區塊 -->
+    <div id="app-content" class="w-full flex flex-col items-center">
+        <!-- 拍照模式介面 (初始顯示) -->
+        <div id="capture-mode" class="flex flex-col items-center justify-between w-full max-w-5xl h-96 md:h-[500px] bg-zinc-800 rounded-3xl shadow-2xl overflow-hidden border border-gray-700 p-4">
+            <h2 class="text-3xl font-bold text-purple-300 mb-4">捕捉 AR 識別物</h2>
+            <div id="camera-preview" class="relative flex-grow w-full flex items-center justify-center min-h-0">
+                <video id="video-stream" autoplay playsinline class="w-full h-full object-cover rounded-2xl"></video>
+                <canvas id="photo-canvas" style="display: none;"></canvas>
+                <img id="captured-image-display" src="" alt="Captured AR Object" class="w-full h-full object-contain rounded-2xl border border-gray-600 hidden" />
+            </div>
+            <div id="capture-buttons" class="flex gap-4 mt-6 flex-shrink-0">
+                <button id="take-photo-btn" class="px-8 py-4 bg-gradient-to-r from-green-500 to-teal-500 text-white font-bold text-xl rounded-full shadow-lg
+                           hover:from-green-600 hover:to-teal-600 transform hover:scale-105 transition-all duration-300 ease-in-out
+                           focus:outline-none focus:ring-4 focus:ring-green-400 focus:ring-opacity-70">
+                    拍照
+                </button>
+                <button id="retake-photo-btn" class="px-6 py-3 bg-red-600 text-white font-semibold rounded-full shadow-md hidden
+                             hover:bg-red-700 transform hover:scale-105 transition-all duration-300 ease-in-out">
+                    重拍
+                </button>
+                <button id="enter-interactive-btn" class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-full shadow-md hidden
+                             hover:bg-blue-700 transform hover:scale-105 transition-all duration-300 ease-in-out">
+                    進入互動模式
+                </button>
+            </div>
+        </div>
+
+        <!-- 互動模式介面 (隱藏，直到進入) -->
+        <div id="interactive-mode" class="hidden w-full flex flex-col items-center">
+            <!-- 主投影區 -->
+            <div id="main-projection-area" class="relative w-full max-w-5xl h-96 md:h-[500px] rounded-3xl shadow-2xl overflow-hidden mb-10 transition-all duration-1000 ease-in-out border border-gray-700">
+                <!-- Cube 群體元素容器 -->
+                <div id="cube-elements-container" class="absolute inset-0 flex items-center justify-center">
+                    <!-- Cube 元素將由 JS 動態生成 -->
+                </div>
+                <!-- 階段描述文字 -->
+                <div id="stage-description" class="absolute bottom-6 left-6 right-6 bg-black bg-opacity-75 backdrop-blur-sm p-5 rounded-xl text-sm md:text-base border border-gray-600">
+                    <h3 id="stage-title" class="text-xl md:text-2xl font-bold mb-2 text-purple-300"></h3>
+                    <p id="stage-description-text" class="text-gray-200 leading-relaxed"></p>
+                </div>
+            </div>
+
+            <!-- 輔助投影區 (對話文字流) -->
+            <div id="aux-projection-area" class="w-full max-w-3xl h-28 bg-zinc-800 rounded-2xl shadow-xl flex items-center justify-center p-4 mb-10 border border-gray-700">
+                <p id="aux-text" class="text-gray-400 text-lg md:text-xl text-center font-serif italic animate-brush-fade"></p>
+            </div>
+
+            <!-- 按鈕選單 -->
+            <div id="stage-buttons-menu" class="flex flex-wrap justify-center gap-5 mb-12">
+                <!-- 按鈕將由 JS 動態生成 -->
+            </div>
+
+            <!-- 落筆按鈕 -->
+            <button id="ink-drop-btn" class="relative px-10 py-5 bg-gradient-to-r from-purple-700 to-indigo-700 text-white font-extrabold text-2xl rounded-full shadow-2xl
+                       hover:from-purple-800 hover:to-indigo-800 transform hover:scale-105 transition-all duration-300 ease-in-out
+                       focus:outline-none focus:ring-4 focus:ring-purple-600 focus:ring-opacity-70
+                       active:scale-95 active:shadow-inner overflow-hidden">
+                <span class="relative z-10">落筆</span>
+                <!-- 模擬漣漪光效 -->
+                <span class="absolute inset-0 rounded-full bg-white opacity-0 animate-pulse-once"></span>
+            </button>
+        </div>
+    </div>
+
+    <!-- 全幅畫作顯示區 (隱藏，直到進入) -->
+    <div id="fullscreen-masterpiece-container" class="fullscreen-masterpiece-container hidden">
+        <img id="fullscreen-masterpiece-image" src="" alt="Masterpiece" class="fullscreen-masterpiece-image" />
+        <button id="return-to-interactive-btn" class="fullscreen-masterpiece-button">
+            返回互動模式
+        </button>
+    </div>
+
+    <!-- 引入 Tone.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
+
+    <script>// 全局狀態變數
+        let appState = 'capture'; // 'capture', 'interactive', 'fullscreen_masterpiece'
+        let capturedImage = null;
+        let currentMasterpiece = null; // 儲存隨機選擇的畫作圖片 URL
+        let inkDropCount = 0; // 追蹤落筆次數
+        let currentStageIndex = 0;
+        let isAudioContextStarted = false;
+        let message = '';
+
+        // DOM 元素引用
+        const messageDisplay = document.getElementById('message-display');
+        const appContent = document.getElementById('app-content');
+        const captureMode = document.getElementById('capture-mode');
+        const interactiveMode = document.getElementById('interactive-mode');
+        const fullscreenMasterpieceContainer = document.getElementById('fullscreen-masterpiece-container');
+        const videoStream = document.getElementById('video-stream');
+        const photoCanvas = document.getElementById('photo-canvas');
+        const capturedImageDisplay = document.getElementById('captured-image-display');
+        const takePhotoBtn = document.getElementById('take-photo-btn');
+        const retakePhotoBtn = document.getElementById('retake-photo-btn');
+        const enterInteractiveBtn = document.getElementById('enter-interactive-btn');
+        const mainProjectionArea = document.getElementById('main-projection-area');
+        const cubeElementsContainer = document.getElementById('cube-elements-container');
+        const stageTitle = document.getElementById('stage-title');
+        const stageDescriptionText = document.getElementById('stage-description-text');
+        const auxText = document.getElementById('aux-text');
+        const stageButtonsMenu = document.getElementById('stage-buttons-menu');
+        const inkDropBtn = document.getElementById('ink-drop-btn');
+        const fullscreenMasterpieceImage = document.getElementById('fullscreen-masterpiece-image');
+        const returnToInteractiveBtn = document.getElementById('return-to-interactive-btn');
+
+        let streamRef = null; // 儲存媒體串流
+
+        // Tone.js 合成器和效果器實例
+        let synthRef, noiseRef, reverbRef, ambientSynthRef;
+
+        // 定義作品的四個階段
+        const stages = [
+            {
+                id: 'initial',
+                title: '留白與呼吸',
+                englishTitle: 'Emptiness and Breath',
+                description: '主投影牆面一片純淨的白色或極淡的米白色，僅有零星、透明度極高的小 Cube 在畫面深處緩慢浮動。它們彷彿是水中最初的墨點，或尚未鋪展的宣紙。',
+                auxText: '初始狀態：簡潔、空靈，強調「留白」與「氣韻」。',
+                visualClass: 'bg-gradient-to-br from-white to-gray-100',
+                cubeConfig: [
+                    { size: 'w-16 h-16', opacity: 'opacity-10', delay: 'delay-0', position: 'top-1/4 left-1/4' },
+                    { size: 'w-20 h-20', opacity: 'opacity-15', delay: 'delay-200', position: 'bottom-1/3 right-1/3' },
+                    { size: 'w-12 h-12', opacity: 'opacity-05', delay: 'delay-400', position: 'top-2/3 left-1/2' },
+                ],
+                animation: 'animate-float',
+            },
+            {
+                id: 'bloom',
+                title: '墨韻初染',
+                englishTitle: 'Initial Ink Bloom',
+                description: '深淺不一的 Cube 群體開始在畫面中央或其他預設位置從無到有地「生長」出來。這些 Cube 的顏色會從純黑到深灰漸變，並帶有不同的透明度，模擬水墨的濃淡暈染。',
+                auxText: '墨色在紙上暈開的瞬間，具象呈現。',
+                visualClass: 'bg-gradient-to-br from-zinc-900 to-gray-700',
+                cubeConfig: [
+                    { size: 'w-24 h-24', opacity: 'opacity-60', delay: 'delay-0', position: 'top-1/3 left-1/3', color: 'bg-gray-900' },
+                    { size: 'w-32 h-32', opacity: 'opacity-70', delay: 'delay-200', position: 'bottom-1/4 right-1/4', color: 'bg-gray-800' },
+                    { size: 'w-20 h-20', opacity: 'opacity-50', delay: 'delay-400', position: 'top-1/2 left-1/2', color: 'bg-gray-700' },
+                ],
+                animation: 'animate-grow-fade',
+            },
+            {
+                id: 'layers',
+                title: '山水層次與意境',
+                englishTitle: 'Landscape Layers and Intent',
+                description: '新的 Cube 群會根據程式邏輯，在畫面上方、側方或遠處再次生成或疊加，形成多重景深。例如：「山巒」、「雲霧」、「水波」。',
+                auxText: '從墨點到山水意境的演變，強調層次、深度與動態。',
+                visualClass: 'bg-gradient-to-br from-zinc-800 to-gray-600',
+                cubeConfig: [
+                    { size: 'w-48 h-48', opacity: 'opacity-80', delay: 'delay-0', position: 'bottom-0 left-1/4', color: 'bg-gray-900', shape: 'rounded-t-full' }, // 山巒基底
+                    { size: 'w-36 h-36', opacity: 'opacity-70', delay: 'delay-200', position: 'bottom-10 left-1/3', color: 'bg-gray-800', shape: 'rounded-t-full' }, // 山巒
+                    { size: 'w-24 h-24', opacity: 'opacity-60', delay: 'delay-400', position: 'bottom-20 left-1/2', color: 'bg-gray-700', shape: 'rounded-t-full' }, // 山巒
+                    { size: 'w-20 h-10', opacity: 'opacity-30', delay: 'delay-600', position: 'top-1/4 left-1/4', color: 'bg-white', shape: 'rounded-full' }, // 雲霧
+                    { size: 'w-32 h-12', opacity: 'opacity-20', delay: 'delay-800', position: 'top-1/3 right-1/4', color: 'bg-white', shape: 'rounded-full' }, // 雲霧
+                    { size: 'w-full h-16', opacity: 'opacity-40', delay: 'delay-1000', position: 'bottom-0 left-0', color: 'bg-blue-900', shape: 'rounded-t-full' }, // 水波
+                ],
+                animation: 'animate-layer-shift',
+            },
+            {
+                id: 'final',
+                title: '氣韻生動',
+                englishTitle: 'Vivid Resonance',
+                description: 'Cube 群體將形成一幅完整而和諧的數位水墨畫卷。它可能是一幅意境深遠的山水，或一棵姿態萬千的墨竹，所有 Cube 濃淡相宜、疏密有致。',
+                auxText: '墨化三維，意境新生。人機共創。',
+                visualClass: 'bg-gradient-to-br from-zinc-700 to-gray-400',
+                cubeConfig: [
+                    { size: 'w-full h-full', opacity: 'opacity-90', delay: 'delay-0', position: 'inset-0', color: 'bg-black', shape: 'rounded-lg', backgroundImage: 'radial-gradient(circle, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 50%, transparent 100%)' },
+                ],
+                animation: 'animate-final-form',
+            },
+        ];
+
+        // 定義圖片序列
+        const imageSequence = [
+            'https://upload.wikimedia.org/wikipedia/commons/e/e9/Giuseppe_Castiglione_%28Lang_Shining%29_-_One_Hundred_Horses_-_Google_Art_Project.jpg', // 郎世寧 百駿圖
+            'https://upload.wikimedia.org/wikipedia/commons/0/0c/Wang_Meng_-_Forest_Grotto_at_Juqu_-_Google_Art_Project.jpg', // 王蒙 具區林屋圖
+            'https://upload.wikimedia.org/wikipedia/commons/b/b3/Ni_Zan_-_Rongxi_Studio_-_Google_Art_Project.jpg', // 倪瓚 容膝齋圖
+        ];
+
+        // --- UI 更新函數 ---
+        function updateUI() {
+            // 隱藏所有主要模式
+            captureMode.classList.add('hidden');
+            interactiveMode.classList.add('hidden');
+            fullscreenMasterpieceContainer.classList.add('hidden');
+
+            // 顯示當前模式
+            if (appState === 'capture') {
+                captureMode.classList.remove('hidden');
+                if (capturedImage) {
+                    videoStream.classList.add('hidden');
+                    capturedImageDisplay.src = capturedImage;
+                    capturedImageDisplay.classList.remove('hidden');
+                    takePhotoBtn.classList.add('hidden');
+                    retakePhotoBtn.classList.remove('hidden');
+                    enterInteractiveBtn.classList.remove('hidden');
+                } else {
+                    videoStream.classList.remove('hidden');
+                    capturedImageDisplay.classList.add('hidden');
+                    takePhotoBtn.classList.remove('hidden');
+                    retakePhotoBtn.classList.add('hidden');
+                    enterInteractiveBtn.classList.add('hidden');
+                }
+            } else if (appState === 'interactive') {
+                interactiveMode.classList.remove('hidden');
+                const currentStage = stages[currentStageIndex];
+
+                // 更新主投影區背景和濾鏡
+                mainProjectionArea.className = `relative w-full max-w-5xl h-96 md:h-[500px] rounded-3xl shadow-2xl overflow-hidden mb-10 transition-all duration-1000 ease-in-out border border-gray-700 ${currentStage.visualClass}`;
+                mainProjectionArea.style.boxShadow = '0 10px 40px rgba(0,0,0,0.6), 0 0 80px rgba(100,0,255,0.2)';
+
+                // 處理背景圖片（僅在第一次進入互動模式且有捕捉圖片時顯示）
+                if (capturedImage && inkDropCount === 0) {
+                    mainProjectionArea.style.backgroundImage = `url(${capturedImage})`;
+                    mainProjectionArea.style.backgroundSize = 'cover';
+                    mainProjectionArea.style.backgroundPosition = 'center';
+                    mainProjectionArea.style.backgroundBlendMode = 'overlay';
+                    mainProjectionArea.style.filter = 'grayscale(80%) blur(5px) opacity(0.3)';
+                } else {
+                    mainProjectionArea.style.backgroundImage = 'none';
+                    mainProjectionArea.style.backgroundBlendMode = 'normal';
+                    mainProjectionArea.style.filter = 'none';
+                }
+
+                // 更新 Cube 元素
+                cubeElementsContainer.innerHTML = ''; // 清空舊的 Cube
+                if (!currentMasterpiece) { // 只有在沒有畫作顯示時才顯示 Cube
+                    currentStage.cubeConfig.forEach((cube, i) => {
+                        const cubeDiv = document.createElement('div');
+                        cubeDiv.className = `absolute rounded-lg transition-all duration-1000 ease-in-out ${cube.size} ${cube.opacity} ${cube.delay} ${cube.position} ${cube.color || 'bg-black'} ${cube.shape || ''} ${currentStage.animation}`;
+                        cubeDiv.style.boxShadow = '0 0 20px rgba(0,0,0,0.4), inset 0 0 10px rgba(255,255,255,0.1)';
+                        cubeDiv.style.backgroundImage = cube.backgroundImage || 'none';
+                        cubeDiv.style.backgroundColor = currentStage.id === 'initial' ? `rgba(0,0,0,${parseFloat(cube.opacity.split('-')[1]) / 100})` : '';
+                        cubeDiv.style.filter = currentStage.id === 'initial' ? 'blur(2px)' : 'none';
+                        cubeElementsContainer.appendChild(cubeDiv);
+                    });
+                }
+
+                // 更新階段描述
+                stageTitle.textContent = `${currentStage.title} (${currentStage.englishTitle})`;
+                stageDescriptionText.textContent = currentStage.description;
+                auxText.textContent = currentStage.auxText;
+
+                // 動態生成階段按鈕
+                stageButtonsMenu.innerHTML = '';
+                stages.forEach((stage, index) => {
+                    const button = document.createElement('button');
+                    button.textContent = stage.title;
+                    button.className = `px-7 py-3 rounded-full font-semibold text-lg transition-all duration-300 ease-in-out border-2 ${currentStageIndex === index ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg transform scale-105 border-blue-400' : 'bg-zinc-700 text-gray-300 hover:bg-zinc-600 hover:text-white hover:shadow-md border-zinc-600'} focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-opacity-50`;
+                    button.onclick = () => handleStageButtonClick(index);
+                    stageButtonsMenu.appendChild(button);
+                });
+
+                // 添加「重新拍照」按鈕
+                const returnToCaptureButton = document.createElement('button');
+                returnToCaptureButton.textContent = '重新拍照';
+                returnToCaptureButton.className = `px-7 py-3 rounded-full font-semibold text-lg transition-all duration-300 ease-in-out border-2 bg-orange-600 text-white hover:bg-orange-700 hover:shadow-md border-orange-500 focus:outline-none focus:ring-4 focus:ring-orange-400 focus:ring-opacity-50`;
+                returnToCaptureButton.onclick = returnToCaptureMode;
+                stageButtonsMenu.appendChild(returnToCaptureButton);
+
+            } else if (appState === 'fullscreen_masterpiece') {
+                fullscreenMasterpieceContainer.classList.remove('hidden');
+                fullscreenMasterpieceImage.src = currentMasterpiece;
+                fullscreenMasterpieceImage.onerror = (e) => { e.target.onerror = null; e.target.src = "https://placehold.co/1920x1080/4A5568/FFFFFF?text=Image+Not+Found"; };
+            }
+
+            // 更新訊息顯示
+            if (message) {
+                messageDisplay.textContent = message;
+                messageDisplay.classList.remove('hidden');
+            } else {
+                messageDisplay.classList.add('hidden');
+            }
+        }
+
+        // --- 攝影機功能 ---
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                videoStream.srcObject = stream;
+                streamRef = stream;
+                message = '請點擊「拍照」捕捉畫面。';
+                updateUI();
+            }
+            catch (err) {
+                console.error("無法訪問攝影機:", err);
+                message = '無法訪問攝影機，請檢查權限或設備。';
+                updateUI();
+            }
+        }
+
+        function stopCamera() {
+            if (streamRef) {
+                streamRef.getTracks().forEach(track => track.stop());
+                streamRef = null;
+            }
+        }
+
+        function takePhoto() {
+            const video = videoStream;
+            const canvas = photoCanvas;
+            if (video && canvas) {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const context = canvas.getContext('2d');
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                capturedImage = canvas.toDataURL('image/png');
+                message = '照片已捕捉！';
+                stopCamera();
+                updateUI();
+            }
+        }
+
+        function retakePhoto() {
+            capturedImage = null;
+            startCamera();
+            message = '請重新拍照。';
+            updateUI();
+        }
+
+        // --- 模式切換功能 ---
+        function enterInteractiveMode() {
+            appState = 'interactive';
+            message = '';
+            inkDropCount = 0; // 確保從0開始計數
+            currentMasterpiece = null; // 確保進入互動模式時沒有畫作顯示
+            updateUI();
+            // 首次進入互動模式時啟動音訊上下文
+            if (!isAudioContextStarted) {
+                Tone.start().then(() => {
+                    isAudioContextStarted = true;
+                    message = '音訊已啟動！';
+                    updateUI();
+                    setTimeout(() => { message = ''; updateUI(); }, 2000);
+                });
+            }
+            playStageAudio(stages[currentStageIndex].id); // 播放當前階段音效
+        }
+
+        function returnToCaptureMode() {
+            appState = 'capture';
+            capturedImage = null;
+            currentMasterpiece = null;
+            inkDropCount = 0;
+            startCamera();
+            updateUI();
+        }
+
+        // --- Tone.js 音效功能 ---
+        function initToneJs() {
+            synthRef = new Tone.Synth().toDestination();
+            noiseRef = new Tone.NoiseSynth({
+                noise: { type: 'pink' },
+                envelope: { attack: 0.005, decay: 0.1, sustain: 0.05, release: 0.2 },
+            }).toDestination();
+            reverbRef = new Tone.Reverb({ decay: 5, preDelay: 0.01 }).toDestination();
+            ambientSynthRef = new Tone.AMSynth({
+                harmonicity: 0.5,
+                oscillator: { type: 'sine' },
+                envelope: { attack: 4, decay: 0.5, sustain: 0.8, release: 4 },
+                modulation: { type: 'sawtooth' },
+                modulationEnvelope: { attack: 4, decay: 0.5, sustain: 0.8, release: 4 },
+            }).connect(reverbRef).toDestination();
+        }
+
+        function playStageAudio(stageId) {
+            if (!isAudioContextStarted) {
+                message = '請點擊任意按鈕啟動音訊。';
+                updateUI();
+                return;
+            }
+
+            // 停止所有正在播放的音效，並取消所有排程事件
+            Tone.Transport.stop();
+            Tone.Transport.cancel();
+            // 確保所有合成器上的音符都停止播放 (使用 triggerRelease 釋放音符)
+            synthRef.triggerRelease(Tone.now());
+            // 修正：NoiseSynth 使用 triggerRelease 來停止音訊
+            noiseRef.triggerRelease(Tone.now());
+            ambientSynthRef.triggerRelease(Tone.now());
+
+            const now = Tone.now() + 0.01; // 獲取當前 Tone.js 時間並添加微小偏移量，確保時間遞增
+
+            switch (stageId) {
+                case 'initial':
+                    ambientSynthRef.triggerAttackRelease("C1", "2s", now);
+                    break;
+                case 'bloom':
+                    synthRef.triggerAttackRelease("C5", "8n", now);
+                    noiseRef.triggerAttackRelease("16n", now + 0.1);
+                    ambientSynthRef.triggerAttackRelease("C2", "2n", now + 0.2);
+                    break;
+                case 'layers':
+                    let scheduledTime = now;
+                    let layerNotes = ["C4", "E4", "G4"];
+                    layerNotes.forEach((note, i) => {
+                        synthRef.triggerAttackRelease(note, "4n", scheduledTime + i * 0.1);
+                    });
+                    scheduledTime += layerNotes.length * 0.1;
+
+                    const zenScale = ["C4", "D4", "F4", "G4", "A4"];
+                    scheduledTime += 0.2;
+                    zenScale.forEach((note, i) => {
+                        synthRef.triggerAttackRelease(note, "8n", scheduledTime + i * 0.2);
+                    });
+                    break;
+                case 'final':
+                    let finalScheduledTime = now;
+                    const finalScale = ["C4", "E4", "G4", "C5", "E5"];
+                    finalScale.forEach((note, i) => {
+                        synthRef.triggerAttackRelease(note, "4n", finalScheduledTime + i * 0.4);
+                    });
+                    finalScheduledTime += finalScale.length * 0.4;
+
+                    ambientSynthRef.triggerAttackRelease("C3", "4n", finalScheduledTime + 0.1);
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        // --- 事件處理函數 ---
+        function handleStageButtonClick(index) {
+            if (!isAudioContextStarted) {
+                Tone.start().then(() => {
+                    isAudioContextStarted = true;
+                    message = '音訊已啟動！';
+                    updateUI();
+                    setTimeout(() => { message = ''; updateUI(); }, 2000);
+                });
+            }
+            currentMasterpiece = null; // 清除畫作
+            inkDropCount = 0; // 重置落筆計數
+            currentStageIndex = index;
+            playStageAudio(stages[currentStageIndex].id);
+            appState = 'interactive';
+            updateUI();
+        }
+
+        function handleInkDrop() {
+            if (!isAudioContextStarted) {
+                Tone.start().then(() => {
+                    isAudioContextStarted = true;
+                    message = '音訊已啟動！';
+                    updateUI();
+                    setTimeout(() => { message = ''; updateUI(); }, 2000);
+                });
+            }
+
+            inkDropCount++; // 增加落筆計數
+
+            // 定義圖片序列
+            const imageSequence = [
+                'https://upload.wikimedia.org/wikipedia/commons/e/e9/Giuseppe_Castiglione_%28Lang_Shining%29_-_One_Hundred_Horses_-_Google_Art_Project.jpg', // 郎世寧 百駿圖
+                'https://upload.wikimedia.org/wikipedia/commons/0/0c/Wang_Meng_-_Forest_Grotto_at_Juqu_-_Google_Art_Project.jpg', // 王蒙 具區林屋圖
+                'https://upload.wikimedia.org/wikipedia/commons/b/b3/Ni_Zan_-_Rongxi_Studio_-_Google_Art_Project.jpg', // 倪瓚 容膝齋圖
+            ];
+
+            if (inkDropCount % 5 === 0) {
+                // 每第5次點擊，隨機顯示一張畫作，並切換到全幅畫作模式
+                const randomIndex = Math.floor(Math.random() * imageSequence.length);
+                currentMasterpiece = imageSequence[randomIndex];
+                appState = 'fullscreen_masterpiece'; // 切換到全幅畫作模式
+            } else {
+                // 其他點擊，清除畫作，顯示 Cube 動畫，並推進到下一個階段
+                currentMasterpiece = null; // 確保沒有畫作顯示
+                currentStageIndex = (currentStageIndex + 1) % stages.length;
+                playStageAudio(stages[currentStageIndex].id);
+                appState = 'interactive'; // 確保仍在互動模式
+            }
+            updateUI();
+        }
+
+        // --- DOMContentLoaded 事件監聽器 ---
+        document.addEventListener('DOMContentLoaded', () => {
+            initToneJs(); // 初始化 Tone.js 實例
+            startCamera(); // 頁面載入時啟動攝影機
+            updateUI(); // 初始 UI 渲染
+
+            // 綁定事件監聽器
+            takePhotoBtn.addEventListener('click', takePhoto);
+            retakePhotoBtn.addEventListener('click', retakePhoto);
+            enterInteractiveBtn.addEventListener('click', enterInteractiveMode);
+            inkDropBtn.addEventListener('click', handleInkDrop);
+            returnToInteractiveBtn.addEventListener('click', enterInteractiveMode); // 從全幅畫作返回
+        });</script>
+</body>
+</html>
