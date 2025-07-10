@@ -1,0 +1,915 @@
+﻿<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>墨立方流韻 - 網頁版</title>
+    <!-- Tailwind CSS CDN for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter font from Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f0f0; /* Light background for contrast */
+            overflow: hidden; /* Prevent scrolling */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .screen {
+            width: 100%;
+            height: 100vh;
+            display: none; /* All screens hidden by default, managed by JS */
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+            .screen.active {
+                display: flex; /* Active screen is displayed */
+            }
+
+        /* Specific styles for camera preview and Three.js canvas */
+        #camera-preview {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 0;
+        }
+
+        #inkCubeCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            background-color: transparent;
+        }
+
+        /* Controls Panel */
+        #controls-panel {
+            position: absolute;
+            top: 10px;
+            right: 10px; /* Positioned to the right */
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 16px; /* p-4 */
+            border-radius: 12px; /* rounded-xl */
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* shadow-lg */
+            z-index: 10;
+            width: 256px; /* w-64 */
+        }
+
+            #controls-panel h2 {
+                font-size: 1.25rem; /* text-xl */
+                font-weight: bold;
+                color: #1f2937; /* gray-800 */
+                margin-bottom: 12px; /* mb-3 */
+                text-align: center;
+            }
+
+            #controls-panel .space-y-3 > div {
+                margin-bottom: 12px; /* space-y-3 */
+            }
+
+            #controls-panel label {
+                display: block;
+                font-size: 0.875rem; /* text-sm */
+                font-weight: 500; /* font-medium */
+                color: #374151; /* gray-700 */
+                margin-bottom: 4px; /* mb-1 */
+            }
+        /* Custom styles for sliders */
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 8px;
+            background: #d3d3d3;
+            outline: none;
+            opacity: 0.7;
+            -webkit-transition: .2s;
+            transition: opacity .2s;
+            border-radius: 4px;
+        }
+
+            input[type="range"]::-webkit-slider-thumb {
+                -webkit-appearance: none;
+                appearance: none;
+                width: 20px;
+                height: 20px;
+                border-radius: 50%;
+                background: #333;
+                cursor: pointer;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            }
+
+            input[type="range"]::-moz-range-thumb {
+                width: 20px;
+                height: 20px;
+                border-radius: 50%;
+                background: #333;
+                cursor: pointer;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+        /* Button styles */
+        .btn-zen {
+            background-color: #333;
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 8px;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            width: 100%; /* Ensure full width */
+            margin-top: 8px; /* mt-2/mt-4 */
+        }
+
+            .btn-zen:hover {
+                background-color: #555;
+                transform: translateY(-2px);
+            }
+
+            .btn-zen:active {
+                transform: translateY(0);
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+
+        .btn-blue {
+            background-color: #3b82f6; /* blue-600 */
+            color: #fff;
+        }
+
+            .btn-blue:hover {
+                background-color: #2563eb; /* blue-700 */
+            }
+
+        .btn-purple {
+            background-color: #9333ea; /* purple-600 */
+        }
+
+            .btn-purple:hover {
+                background-color: #7e22ce; /* purple-700 */
+            }
+
+        .btn-gray {
+            background-color: #6b7280; /* gray-500 */
+        }
+
+            .btn-gray:hover {
+                background-color: #4b5563; /* gray-600 */
+            }
+
+        /* Artwork Display Overlay */
+        #artwork-display-overlay {
+            background-color: rgba(0, 0, 0, 0.9);
+            color: white;
+            z-index: 20; /* Higher z-index to cover everything */
+        }
+
+        #artwork-image {
+            max-width: 90%;
+            max-height: 80vh; /* Use viewport height for better responsiveness */
+            object-fit: contain; /* Ensure entire image is visible */
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+
+        /* Camera capture button */
+        #capture-btn {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            border-radius: 10px;
+            z-index: 5; /* Above camera preview */
+        }
+
+        /* General layout for screens */
+        .bg-gradient-to-br {
+            background-image: linear-gradient(to bottom right, var(--tw-gradient-stops));
+        }
+
+        .from-blue-100 {
+            --tw-gradient-from: #dbeafe;
+            --tw-gradient-to: rgba(219, 234, 254, 0);
+        }
+
+        .to-indigo-100 {
+            --tw-gradient-to: #e0e7ff;
+        }
+
+        .from-gray-100 {
+            --tw-gradient-from: #f3f4f6;
+            --tw-gradient-to: rgba(243, 244, 246, 0);
+        }
+
+        .to-gray-200 {
+            --tw-gradient-to: #e5e7eb;
+        }
+
+        .rounded-xl {
+            border-radius: 0.75rem;
+        }
+
+        .shadow-2xl {
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+
+        .p-8 {
+            padding: 2rem;
+        }
+
+        .max-w-md {
+            max-width: 28rem;
+        }
+
+        .max-w-lg {
+            max-width: 32rem;
+        }
+
+        .max-w-2xl {
+            max-width: 42rem;
+        }
+
+        .w-full {
+            width: 100%;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-4xl {
+            font-size: 2.25rem;
+        }
+
+        .font-extrabold {
+            font-weight: 800;
+        }
+
+        .text-gray-800 {
+            color: #1f2937;
+        }
+
+        .mb-6 {
+            margin-bottom: 1.5rem;
+        }
+
+        .text-lg {
+            font-size: 1.125rem;
+        }
+
+        .text-gray-600 {
+            color: #4b5563;
+        }
+
+        .mb-8 {
+            margin-bottom: 2rem;
+        }
+
+        .py-3 {
+            padding-top: 0.75rem;
+            padding-bottom: 0.75rem;
+        }
+
+        .px-8 {
+            padding-left: 2rem;
+            padding-right: 2rem;
+        }
+
+        .rounded-full {
+            border-radius: 9999px;
+        }
+
+        .shadow-lg {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        .transition {
+            transition-property: all;
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+            transition-duration: 150ms;
+        }
+
+        .duration-300 {
+            transition-duration: 300ms;
+        }
+
+        .ease-in-out {
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .transform {
+            transform: var(--tw-transform);
+        }
+
+        .hover\:scale-105:hover {
+            --tw-scale-x: 1.05;
+            --tw-scale-y: 1.05;
+            transform: var(--tw-transform);
+        }
+
+        .text-3xl {
+            font-size: 1.875rem;
+        }
+
+        .font-bold {
+            font-weight: 700;
+        }
+
+        .mb-6 {
+            margin-bottom: 1.5rem;
+        }
+
+        .relative {
+            position: relative;
+        }
+
+        .overflow-hidden {
+            overflow: hidden;
+        }
+
+        .aspect-ratio-4-3 {
+            aspect-ratio: 4 / 3;
+        }
+
+        .bg-gray-700 {
+            background-color: #374151;
+        }
+
+        .object-cover {
+            object-fit: cover;
+        }
+
+        .justify-center {
+            justify-content: center;
+        }
+
+        .space-x-4 > :not([hidden]) ~ :not([hidden]) {
+            margin-left: 1rem;
+        }
+
+        .mt-6 {
+            margin-top: 1.5rem;
+        }
+
+        .text-sm {
+            font-size: 0.875rem;
+        }
+
+        .text-gray-500 {
+            color: #6b7280;
+        }
+
+        .mt-4 {
+            margin-top: 1rem;
+        }
+
+        .absolute {
+            position: absolute;
+        }
+
+        .inset-0 {
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+        }
+
+        .w-full {
+            width: 100%;
+        }
+
+        .h-full {
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <!-- Camera Preview Video Element -->
+    <video id="camera-preview"></video>
+    <!-- Three.js Canvas for Ink Adjustment -->
+    <canvas id="inkCubeCanvas"></canvas>
+
+    <!-- Home Screen -->
+    <div id="home-screen" class="screen active bg-gradient-to-br from-blue-100 to-indigo-100 p-4">
+        <div class="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full text-center">
+            <h1 class="text-4xl font-extrabold text-gray-800 mb-6 font-inter">墨立方流韻</h1>
+            <p class="text-lg text-gray-600 mb-8 font-inter">透過攝影機捕捉畫面，創造您的數位水墨意境。</p>
+            <button id="home-to-camera-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105 font-inter">
+                拍照
+            </button>
+        </div>
+    </div>
+
+    <!-- Camera View Screen -->
+    <div id="camera-view-screen" class="screen bg-gradient-to-br from-gray-100 to-gray-200 p-4">
+        <div class="bg-white rounded-xl shadow-2xl p-8 max-w-lg w-full text-center">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6 font-inter">即時拍攝</h2>
+            <div class="relative w-full max-w-full overflow-hidden rounded-lg shadow-md mb-6 bg-gray-700" style="aspect-ratio: 4/3;">
+                <!-- Video element is outside this div, but its content will be here -->
+                <canvas id="captureCanvas" style="display: none;"></canvas> <!-- Hidden canvas for photo capture -->
+            </div>
+
+            <div class="flex justify-center space-x-4 mt-6">
+                <button id="camera-to-home-btn" class="btn-gray hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-full transition duration-300 font-inter">
+                    取消
+                </button>
+                <button id="capture-photo-btn" class="btn-purple hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-full shadow-lg transition duration-300 transform hover:scale-105 font-inter">
+                    確定拍攝
+                </button>
+            </div>
+            <p class="text-sm text-gray-500 mt-4 font-inter">請允許瀏覽器訪問攝影機。</p>
+        </div>
+    </div>
+
+    <!-- Ink Adjustment Screen -->
+    <div id="ink-adjustment-screen" class="screen bg-gradient-to-br from-gray-100 to-gray-200 p-4">
+        <!-- Three.js canvas is managed separately and positioned absolutely -->
+        <!-- Controls Panel -->
+        <div id="controls-panel">
+            <h2>墨立方流韻</h2>
+            <div class="space-y-3">
+                <div>
+                    <label for="density">密度 (Density)</label>
+                    <input type="range" id="density" min="0.1" max="1.0" value="0.5" step="0.05">
+                </div>
+                <div>
+                    <label for="flowSpeed">流動速度 (Flow Speed)</label>
+                    <input type="range" id="flowSpeed" min="0.001" max="0.1" value="0.03" step="0.001">
+                </div>
+                <div>
+                    <label for="inkVariation">墨色變化 (Ink Variation)</label>
+                    <input type="range" id="inkVariation" min="0.0" max="1.0" value="0.7" step="0.05">
+                </div>
+                <div>
+                    <label for="opacity">透明度 (Opacity)</label>
+                    <input type="range" id="opacity" min="0.1" max="1.0" value="0.8" step="0.05">
+                </div>
+                <button id="resetBtn" class="btn-zen">重置 (Reset)</button>
+                <button id="submitArtworkBtn" class="btn-zen btn-blue">提交作品 (Submit Artwork)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Artwork Display Screen -->
+    <div id="artwork-display-screen" class="screen bg-gradient-to-br from-blue-100 to-indigo-100 p-4">
+        <div class="bg-white rounded-xl shadow-2xl p-8 max-w-2xl w-full text-center">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6 font-inter">我的水墨畫作品</h2>
+            <img id="artworkImage" src="" alt="我的水墨畫作品" class="max-w-full h-auto rounded-lg shadow-md mx-auto mb-6" />
+            <button id="restartExperienceBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105 font-inter">
+                重新創作
+            </button>
+        </div>
+    </div>
+
+    <!-- Three.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>// --- Global Variables ---
+        let currentScreen = 'home'; // 'home', 'cameraView', 'inkAdjustment', 'artworkDisplay'
+        let uploadedImageUrl = null;
+        let finalArtworkImageUrl = null; // This will now be the captured Three.js canvas data URL
+
+        // DOM Elements
+        const homeScreen = document.getElementById('home-screen');
+        const cameraViewScreen = document.getElementById('camera-view-screen');
+        const inkAdjustmentScreen = document.getElementById('ink-adjustment-screen');
+        const artworkDisplayScreen = document.getElementById('artwork-display-screen');
+
+        const cameraPreview = document.getElementById('camera-preview');
+        const captureCanvas = document.getElementById('captureCanvas'); // For capturing photo from video
+        let mediaStream = null; // To hold the camera stream
+
+        let threeCanvas; // Declared here, assigned in window.onload
+        let threeScene, threeCamera, threeRenderer;
+        let threeBackgroundMesh; // Plane for the captured image
+        let threeInkCubes = []; // Array for ink cube particles
+        let animationFrameId = null; // To control animation loop
+
+        // Ink cube settings
+        let inkCubeSettings = {
+            density: 0.5,
+            flowSpeed: 0.03,
+            inkVariation: 0.7,
+            opacity: 0.8,
+        };
+
+        // --- Screen Management ---
+        function showScreen(screenName) {
+            console.log(`Switching to screen: ${screenName}`);
+            const screens = document.querySelectorAll('.screen');
+            screens.forEach(screen => screen.classList.remove('active'));
+
+            switch (screenName) {
+                case 'home':
+                    homeScreen.classList.add('active');
+                    stopCamera(); // Ensure camera is off when not in camera view
+                    cleanupThreeJsScene(); // Ensure Three.js is cleaned up
+                    break;
+                case 'cameraView':
+                    cameraViewScreen.classList.add('active');
+                    startCamera();
+                    cleanupThreeJsScene(); // Ensure Three.js is cleaned up
+                    break;
+                case 'inkAdjustment':
+                    inkAdjustmentScreen.classList.add('active');
+                    if (uploadedImageUrl) {
+                        initThreeJsScene(uploadedImageUrl);
+                        // Animation loop is started inside initThreeJsScene's texture load callback
+                    } else {
+                        console.error("No image to adjust. Returning to home screen.");
+                        alert("沒有圖片可供調整，請先拍照。");
+                        showScreen('home'); // Fallback if no image
+                    }
+                    break;
+                case 'artworkDisplay':
+                    artworkDisplayScreen.classList.add('active');
+                    // Stop Three.js animation if it's running
+                    if (threeRenderer) {
+                        threeRenderer.setAnimationLoop(null);
+                        if (animationFrameId) {
+                            cancelAnimationFrame(animationFrameId);
+                            animationFrameId = null;
+                        }
+                    }
+                    // Clear Three.js scene resources
+                    cleanupThreeJsScene();
+                    break;
+            }
+            currentScreen = screenName;
+        }
+
+        // --- Camera Functions ---
+        async function startCamera() {
+            console.log("Attempting to start camera...");
+            stopCamera(); // Ensure any existing stream is stopped
+            try {
+                // Check for HTTPS first (most common issue)
+                if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                    const secureContextMessage = "無法開啟攝影機：為了保護您的隱私，瀏覽器要求在 HTTPS (安全連線) 環境下才能存取攝影機。請確保網址以 'https://' 開頭。如果您在本機測試，請使用支援 HTTPS 的開發伺服器（例如：live-server --https）。";
+                    console.error(secureContextMessage);
+                    alert(secureContextMessage);
+                    showScreen('home'); // Go back to home on failure
+                    return;
+                }
+
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                cameraPreview.srcObject = stream;
+                mediaStream = stream;
+                cameraPreview.play();
+                cameraPreview.style.display = 'block'; // Show video element
+                console.log("Camera started successfully.");
+            } catch (err) {
+                console.error("無法訪問攝影機: ", err);
+                let errorMessage = "無法啟動攝影機。";
+                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                    errorMessage += " 權限被拒絕：請允許瀏覽器使用攝影機。";
+                } else if (err.name === 'NotFoundError') {
+                    errorMessage += " 找不到攝影機：請確認您的裝置有攝影機。";
+                } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+                    errorMessage += " 攝影機無法使用：可能被其他應用程式佔用。";
+                } else if (err.name === 'SecurityError') {
+                    errorMessage += " 安全錯誤：請確認您正在使用 HTTPS 安全連線。";
+                } else {
+                    errorMessage += " 未知錯誤：" + err.message;
+                }
+                alert(errorMessage);
+                showScreen('home'); // Go back to home on failure
+            }
+        }
+
+        function stopCamera() {
+            if (mediaStream) {
+                console.log("Stopping camera stream.");
+                mediaStream.getTracks().forEach(track => track.stop());
+                mediaStream = null;
+            }
+            if (cameraPreview.srcObject) {
+                cameraPreview.srcObject = null;
+            }
+            cameraPreview.style.display = 'none'; // Hide video element
+        }
+
+        function capturePhoto() {
+            console.log("Capturing photo...");
+            if (cameraPreview && captureCanvas && cameraPreview.videoWidth > 0) {
+                const video = cameraPreview;
+                const canvas = captureCanvas;
+                const context = canvas.getContext('2d');
+
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                uploadedImageUrl = canvas.toDataURL('image/png');
+
+                stopCamera(); // Stop camera after capturing photo
+                showScreen('inkAdjustment'); // Move to ink adjustment screen
+                console.log("Photo captured and screen switched to ink adjustment.");
+            } else {
+                console.error("Cannot capture photo: camera preview not ready or videoWidth is 0.");
+                alert("無法拍攝照片，請確保攝影機已啟動並顯示畫面。");
+            }
+        }
+
+        // --- Three.js Ink Cube Functions ---
+        function initThreeJsScene(imageSource) {
+            console.log("Initializing Three.js scene with image:", imageSource);
+            // Ensure threeCanvas exists before proceeding
+            // threeCanvas is now assigned in window.onload, so it should be available.
+            if (!threeCanvas) {
+                console.error("initThreeJsScene: Global inkCubeCanvas element is null!");
+                return;
+            }
+
+            // Cleanup previous scene if exists
+            cleanupThreeJsScene();
+
+            const width = threeCanvas.clientWidth; // Access directly now
+            const height = threeCanvas.clientHeight;
+
+            // Scene
+            threeScene = new THREE.Scene();
+
+            // Camera
+            threeCamera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+            threeCamera.position.z = 1.5; // Position camera to view the scene
+
+            // Renderer
+            threeRenderer = new THREE.WebGLRenderer({ canvas: threeCanvas, alpha: true, antialias: true });
+            threeRenderer.setSize(width, height);
+            threeRenderer.setPixelRatio(window.devicePixelRatio);
+
+            // Background Image Plane
+            const textureLoader = new THREE.TextureLoader();
+            textureLoader.load(imageSource, (texture) => {
+                const aspectRatio = texture.image.width / texture.image.height;
+                const planeHeight = 2; // Fixed height for the plane
+                const planeWidth = planeHeight * aspectRatio;
+
+                const backgroundGeometry = new THREE.PlaneGeometry(planeWidth, planeHeight);
+                const backgroundMaterial = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
+                threeBackgroundMesh = new THREE.Mesh(backgroundGeometry, backgroundMaterial);
+                threeBackgroundMesh.position.z = -0.5; // Place slightly behind the cubes
+                threeScene.add(threeBackgroundMesh);
+                // Start animation loop once texture is loaded
+                if (!animationFrameId) { // Prevent multiple animation loops
+                    animationFrameId = requestAnimationFrame(animate);
+                }
+                console.log("Background texture loaded and animation started.");
+            }, undefined, (error) => {
+                console.error("Error loading background image texture:", error);
+                // Fallback to a solid color background if image fails to load
+                const backgroundGeometry = new THREE.PlaneGeometry(3, 2);
+                const backgroundMaterial = new THREE.MeshBasicMaterial({ color: 0xcccccc, side: THREE.DoubleSide });
+                threeBackgroundMesh = new THREE.Mesh(backgroundGeometry, backgroundMaterial);
+                threeBackgroundMesh.position.z = -0.5;
+                threeScene.add(threeBackgroundMesh);
+                // Start animation loop even if texture fails, with fallback material
+                if (!animationFrameId) { // Prevent multiple animation loops
+                    animationFrameId = requestAnimationFrame(animate);
+                }
+                alert("載入背景圖片失敗，將使用預設背景。");
+            });
+
+            // Create Ink Cubes
+            createInkCubes(threeScene);
+
+            // Handle window resize
+            window.addEventListener('resize', handleResize);
+            console.log("Three.js scene initialized.");
+        }
+
+        function cleanupThreeJsScene() {
+            console.log("Cleaning up Three.js scene...");
+            // Remove the resize event listener first
+            window.removeEventListener('resize', handleResize);
+
+            if (threeRenderer) {
+                threeRenderer.setAnimationLoop(null);
+                threeRenderer.dispose();
+                threeRenderer = null; // Set to null after disposing
+            }
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+            // Dispose of scene objects and materials to prevent memory leaks
+            if (threeScene) {
+                threeScene.traverse(object => {
+                    if (object.isMesh) {
+                        object.geometry.dispose();
+                        if (object.material) { // Check if material exists
+                            if (object.material.isMaterial) {
+                                object.material.dispose();
+                            } else if (Array.isArray(object.material)) {
+                                object.material.forEach(m => m.dispose());
+                            }
+                        }
+                    }
+                });
+                // Clear the scene's children array explicitly
+                while(threeScene.children.length > 0){
+                    threeScene.remove(threeScene.children[0]);
+                }
+                threeScene = null; // Set to null after disposing
+            }
+            threeCamera = null;
+            threeInkCubes = []; // Clear the array
+            threeBackgroundMesh = null;
+            console.log("Three.js scene cleaned up.");
+        }
+
+        function handleResize() {
+            // threeCanvas is now a global variable assigned in window.onload
+            if (!threeCanvas || !threeCamera || !threeRenderer) {
+                console.warn("handleResize: Three.js elements (or canvas) not ready. Skipping resize handling.");
+                return;
+            }
+            const newWidth = threeCanvas.clientWidth;
+            const newHeight = threeCanvas.clientHeight;
+            threeCamera.aspect = newWidth / newHeight;
+            threeCamera.updateProjectionMatrix();
+            threeRenderer.setSize(newWidth, newHeight);
+            console.log("Canvas resized to:", newWidth, newHeight);
+        }
+
+        function createInkCubes(scene) {
+            console.log("Creating ink cubes...");
+            // Remove existing cubes from scene if any
+            threeInkCubes.forEach(cube => scene.remove(cube));
+            threeInkCubes = [];
+
+            const cubeGeometry = new THREE.BoxGeometry(0.05, 0.05, 0.05); // Small cubes
+
+            for (let i = 0; i < 1000; i++) { // Use a fixed number of cubes for now
+                const x = (Math.random() - 0.5) * 1.5 * inkCubeSettings.density;
+                const y = (Math.random() - 0.5) * 1.5 * inkCubeSettings.density;
+                const z = (Math.random() - 0.5) * 0.5 * inkCubeSettings.density; // Keep them relatively flat
+
+                const colorValue = Math.random() * inkCubeSettings.inkVariation;
+                const color = new THREE.Color(colorValue, colorValue, colorValue); // Grayscale ink
+
+                const material = new THREE.MeshBasicMaterial({
+                    color: color,
+                    transparent: true,
+                    opacity: inkCubeSettings.opacity * (0.5 + Math.random() * 0.5) // Vary opacity slightly
+                });
+
+                const cube = new THREE.Mesh(cubeGeometry, material);
+                cube.position.set(x, y, z);
+                cube.userData.velocity = new THREE.Vector3(
+                    (Math.random() - 0.5) * 0.005,
+                    (Math.random() - 0.5) * 0.005,
+                    (Math.random() - 0.5) * 0.001
+                ); // Slower, subtle movement
+                scene.add(cube);
+                threeInkCubes.push(cube);
+            }
+            console.log("Ink cubes created.");
+        }
+
+        function animate() {
+            // console.log("Animating..."); // Log less frequently
+            if (!threeRenderer || !threeScene || !threeCamera) {
+                animationFrameId = null; // Stop animation loop if Three.js elements are not ready
+                console.warn("Animation stopped: Three.js elements not ready.");
+                return;
+            }
+
+            threeInkCubes.forEach(cube => {
+                cube.position.x += cube.userData.velocity.x * inkCubeSettings.flowSpeed;
+                cube.position.y += cube.userData.velocity.y * inkCubeSettings.flowSpeed;
+                cube.position.z += cube.userData.velocity.z * inkCubeSettings.flowSpeed;
+
+                // Wrap around logic for continuous flow
+                const bounds = 1.5; // Roughly the size of the background plane
+                if (Math.abs(cube.position.x) > bounds) cube.position.x = -cube.position.x * 0.9;
+                if (Math.abs(cube.position.y) > bounds) cube.position.y = -cube.position.y * 0.9;
+                if (Math.abs(cube.position.z) > 0.5) cube.position.z = -cube.position.z * 0.9;
+
+                // Update cube color/opacity based on current settings
+                const material = cube.material;
+                const newColorValue = Math.random() * inkCubeSettings.inkVariation;
+                material.color.setRGB(newColorValue, newColorValue, newColorValue);
+                material.opacity = inkCubeSettings.opacity * (0.5 + Math.random() * 0.5);
+            });
+
+            threeRenderer.render(threeScene, threeCamera);
+            animationFrameId = requestAnimationFrame(animate);
+        }
+
+        function resetInkCubeSimulation() {
+            console.log("Resetting ink cube simulation...");
+            inkCubeSettings = {
+                density: 0.5,
+                flowSpeed: 0.03,
+                inkVariation: 0.7,
+                opacity: 0.8,
+            };
+            // Update UI sliders
+            document.getElementById('density').value = inkCubeSettings.density;
+            document.getElementById('flowSpeed').value = inkCubeSettings.flowSpeed;
+            document.getElementById('inkVariation').value = inkCubeSettings.inkVariation;
+            document.getElementById('opacity').value = inkCubeSettings.opacity;
+
+            if (threeScene) {
+                createInkCubes(threeScene);
+            }
+            console.log("Ink cube simulation reset.");
+        }
+
+        function submitArtwork() {
+            console.log("Submitting artwork...");
+            // Capture the current Three.js canvas content
+            if (threeRenderer && threeCanvas) {
+                threeRenderer.setAnimationLoop(null); // Stop Three.js animation
+                if (animationFrameId) {
+                    cancelAnimationFrame(animationFrameId);
+                    animationFrameId = null;
+                }
+                finalArtworkImageUrl = threeCanvas.toDataURL('image/png');
+            } else {
+                console.error("無法提交作品：3D 渲染器或畫布未準備就緒。");
+                alert("無法提交作品：3D 渲染器或畫布未準備就緒。");
+                // Fallback to a placeholder if capture fails
+                finalArtworkImageUrl = "https://placehold.co/800x600/FF0000/FFFFFF?text=Artwork+Capture+Error";
+            }
+
+            // Update artwork image source
+            document.getElementById('artworkImage').src = finalArtworkImageUrl;
+            showScreen('artworkDisplay');
+            console.log("Artwork submitted and displayed.");
+        }
+
+        function restartExperience() {
+            console.log("Restarting experience...");
+            // Reset all relevant states and settings
+            uploadedImageUrl = null;
+            finalArtworkImageUrl = null;
+            inkCubeSettings = { density: 0.5, flowSpeed: 0.03, inkVariation: 0.7, opacity: 0.8 };
+            // Reset UI sliders
+            document.getElementById('density').value = inkCubeSettings.density;
+            document.getElementById('flowSpeed').value = inkCubeSettings.flowSpeed;
+            document.getElementById('inkVariation').value = inkCubeSettings.inkVariation;
+            document.getElementById('opacity').value = inkCubeSettings.opacity;
+
+            showScreen('home'); // Go back to home to restart the flow
+            console.log("Experience restarted.");
+        }
+
+        // --- Event Listeners ---
+        window.onload = () => {
+            // Assign threeCanvas here, after DOM is ready
+            threeCanvas = document.getElementById('inkCubeCanvas');
+            if (!threeCanvas) {
+                console.error("Critical Error: inkCubeCanvas element not found on page load!");
+                alert("應用程式初始化失敗：找不到畫布元素。");
+                return; // Stop execution if critical element is missing
+            }
+
+            // Add global resize listener once
+            window.addEventListener('resize', handleResize);
+
+            // Initial screen display
+            showScreen('home');
+
+            // Home Screen Buttons
+            document.getElementById('home-to-camera-btn').addEventListener('click', () => showScreen('cameraView'));
+
+            // Camera View Screen Buttons
+            document.getElementById('camera-to-home-btn').addEventListener('click', () => showScreen('home'));
+            document.getElementById('capture-photo-btn').addEventListener('click', capturePhoto);
+
+            // Ink Adjustment Screen Sliders and Buttons
+            document.getElementById('density').addEventListener('input', (e) => {
+                inkCubeSettings.density = parseFloat(e.target.value);
+                // Recreate cubes to apply new density visually
+                if (threeScene) createInkCubes(threeScene);
+            });
+            document.getElementById('flowSpeed').addEventListener('input', (e) => inkCubeSettings.flowSpeed = parseFloat(e.target.value));
+            document.getElementById('inkVariation').addEventListener('input', (e) => inkCubeSettings.inkVariation = parseFloat(e.target.value));
+            document.getElementById('opacity').addEventListener('input', (e) => inkCubeSettings.opacity = parseFloat(e.target.value));
+            document.getElementById('resetBtn').addEventListener('click', resetInkCubeSimulation);
+            document.getElementById('submitArtworkBtn').addEventListener('click', submitArtwork);
+
+            // Artwork Display Screen Button
+            document.getElementById('restartExperienceBtn').addEventListener('click', restartExperience);
+
+            console.log("Page loaded and initial setup complete.");
+        };</script>
+</body>
+</html>
