@@ -37,17 +37,7 @@
                 display: flex; /* Active screen is displayed */
             }
 
-        /* Specific styles for camera preview (now simulated video) and Three.js canvas */
-        #camera-preview {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            z-index: 0;
-        }
-
+        /* Specific styles for Three.js canvas */
         #inkCubeCanvas {
             position: absolute;
             top: 0;
@@ -183,18 +173,6 @@
             border-radius: 12px;
             box-shadow: 0 8px 16px rgba(0,0,0,0.2);
             margin-bottom: 20px;
-        }
-
-        /* Camera capture button */
-        #capture-btn {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            padding: 15px 30px;
-            font-size: 1.2rem;
-            border-radius: 10px;
-            z-index: 5; /* Above camera preview */
         }
 
         /* General layout for screens */
@@ -399,8 +377,6 @@
     </style>
 </head>
 <body>
-    <!-- Camera Preview Video Element (Now for simulation only) -->
-    <video id="camera-preview" loop muted playsinline></video>
     <!-- Three.js Canvas for Ink Adjustment -->
     <canvas id="inkCubeCanvas"></canvas>
 
@@ -415,12 +391,12 @@
         </div>
     </div>
 
-    <!-- Camera View Screen (Now a simulated camera view) -->
+    <!-- Camera View Screen (Now a static image preview) -->
     <div id="camera-view-screen" class="screen bg-gradient-to-br from-gray-100 to-gray-200 p-4">
         <div class="bg-white rounded-xl shadow-2xl p-8 max-w-lg w-full text-center">
             <h2 class="text-3xl font-bold text-gray-800 mb-6 font-inter">即時拍攝 (模擬)</h2>
             <div class="relative w-full max-w-full overflow-hidden rounded-lg shadow-md mb-6 bg-gray-700" style="aspect-ratio: 4/3;">
-                <!-- camera-preview video element is positioned fixed outside this div -->
+                <img id="simulated-photo-preview" src="https://placehold.co/1280x720/A0A0A0/FFFFFF?text=Simulated+Photo" alt="模擬攝影機畫面" class="absolute inset-0 w-full h-full object-cover rounded-lg" />
                 <canvas id="captureCanvas" style="display: none;"></canvas> <!-- Hidden canvas for photo capture -->
             </div>
 
@@ -481,8 +457,8 @@
     <script>// --- Global Variables ---
         let currentScreen = 'home'; // 'home', 'cameraView', 'inkAdjustment', 'artworkDisplay'
         let uploadedImageUrl = null;
-        // Simulated video source for camera preview. Replace with your own video if desired.
-        const simulatedVideoSource = "https://www.w3schools.com/html/mov_bbb.mp4"; // A public domain test video
+        // Static image source for camera preview. This will always load.
+        const simulatedPhotoSource = "https://placehold.co/1280x720/A0A0A0/FFFFFF?text=Simulated+Photo";
         let finalArtworkImageUrl = null; // This will now be the captured Three.js canvas data URL
 
         // DOM Elements
@@ -491,8 +467,8 @@
         const inkAdjustmentScreen = document.getElementById('ink-adjustment-screen');
         const artworkDisplayScreen = document.getElementById('artwork-display-screen');
 
-        const cameraPreview = document.getElementById('camera-preview'); // Video element for simulation
-        const captureCanvas = document.getElementById('captureCanvas'); // For capturing photo from video
+        const simulatedPhotoPreview = document.getElementById('simulated-photo-preview'); // Img element for static preview
+        const captureCanvas = document.getElementById('captureCanvas'); // For capturing photo from video (now img)
 
         let threeCanvas; // Declared here, assigned in window.onload
         let threeScene, threeCamera, threeRenderer;
@@ -517,12 +493,14 @@
             switch (screenName) {
                 case 'home':
                     homeScreen.classList.add('active');
-                    stopSimulatedCamera(); // Ensure simulated camera is off
+                    // No camera/simulated camera to stop here in this version
                     cleanupThreeJsScene(); // Ensure Three.js is cleaned up
                     break;
                 case 'cameraView':
                     cameraViewScreen.classList.add('active');
-                    startSimulatedCamera(); // Start simulated camera
+                    // No camera to start here, static image is always present
+                    // Ensure the static image is visible
+                    simulatedPhotoPreview.style.display = 'block';
                     cleanupThreeJsScene(); // Ensure Three.js is cleaned up
                     break;
                 case 'inkAdjustment':
@@ -531,8 +509,8 @@
                         initThreeJsScene(uploadedImageUrl);
                         // Animation loop is started inside initThreeJsScene's texture load callback
                     } else {
-                        console.error("No image to adjust. Returning to home screen.");
-                        alert("沒有圖片可供調整，請先拍照。");
+                        console.error("No image to adjust. This should not happen if capturePhoto works correctly.");
+                        alert("應用程式內部錯誤：沒有圖片可供調整。請嘗試重新開始。");
                         showScreen('home'); // Fallback if no image
                     }
                     break;
@@ -553,53 +531,17 @@
             currentScreen = screenName;
         }
 
-        // --- Simulated Camera Functions ---
-        function startSimulatedCamera() {
-            console.log("Starting simulated camera...");
-            cameraPreview.src = simulatedVideoSource;
-            cameraPreview.loop = true; // Loop the video
-            cameraPreview.muted = true; // Mute the video
-            cameraPreview.play().catch(e => console.error("Error playing simulated video:", e)); // Play and catch potential errors
-            cameraPreview.style.display = 'block'; // Show video element
-        }
-
-        function stopSimulatedCamera() {
-            if (cameraPreview.srcObject) { // If it was a real stream (unlikely in this version)
-                cameraPreview.srcObject.getTracks().forEach(track => track.stop());
-                cameraPreview.srcObject = null;
-            }
-            if (cameraPreview.src) { // If it was a simulated video
-                cameraPreview.pause();
-                cameraPreview.src = ''; // Clear source
-            }
-            cameraPreview.style.display = 'none'; // Hide video element
-            console.log("Simulated camera stopped.");
-        }
-
+        // --- Photo Capture (from static image) ---
         function capturePhoto() {
-            console.log("Capturing photo from simulated camera...");
-            if (cameraPreview && captureCanvas && cameraPreview.videoWidth > 0) {
-                const video = cameraPreview;
-                const canvas = captureCanvas;
-                const context = canvas.getContext('2d');
+            console.log("Capturing photo from simulated static image...");
+            // Directly use the static image source as the uploaded image
+            uploadedImageUrl = simulatedPhotoSource;
 
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
+            // No camera to stop in this version
+            simulatedPhotoPreview.style.display = 'none'; // Hide the static preview image
 
-                context.drawImage(video, 0, 0, canvas.width, canvas.height);
-                uploadedImageUrl = canvas.toDataURL('image/png');
-
-                stopSimulatedCamera(); // Stop simulated camera after capturing photo
-                showScreen('inkAdjustment'); // Move to ink adjustment screen
-                console.log("Photo captured from simulated camera and screen switched to ink adjustment.");
-            } else {
-                console.error("Cannot capture photo: simulated camera preview not ready or videoWidth is 0.");
-                alert("無法拍攝照片，請確保模擬攝影機已啟動並顯示畫面。");
-                // Fallback to a static placeholder if even simulated capture fails
-                uploadedImageUrl = "https://placehold.co/1280x720/FF0000/FFFFFF?text=Simulated+Capture+Failed";
-                stopSimulatedCamera();
-                showScreen('inkAdjustment');
-            }
+            showScreen('inkAdjustment'); // Move to ink adjustment screen
+            console.log("Photo captured from simulated static image and screen switched to ink adjustment.");
         }
 
         // --- Three.js Ink Cube Functions ---
@@ -659,7 +601,6 @@
                 if (!animationFrameId) { // Prevent multiple animation loops
                     animationFrameId = requestAnimationFrame(animate);
                 }
-                // Removed alert for texture loading error
             });
 
             // Create Ink Cubes
@@ -699,7 +640,7 @@
                     }
                 });
                 // Clear the scene's children array explicitly
-                while(threeScene.children.length > 0){
+                while (threeScene.children.length > 0) {
                     threeScene.remove(threeScene.children[0]);
                 }
                 threeScene = null; // Set to null after disposing
@@ -870,6 +811,12 @@
             // Camera View Screen Buttons
             document.getElementById('camera-to-home-btn').addEventListener('click', () => showScreen('home'));
             document.getElementById('capture-photo-btn').addEventListener('click', capturePhoto);
+            // Removed skip-photo-btn as it's now the default behavior for capture
+            // document.getElementById('skip-photo-btn').addEventListener('click', () => {
+            //     uploadedImageUrl = fallbackStaticImage; // Set to static fallback
+            //     stopSimulatedCamera(); // Ensure simulated camera stops
+            //     showScreen('inkAdjustment'); // Go directly to ink adjustment
+            // });
 
             // Ink Adjustment Screen Sliders and Buttons
             document.getElementById('density').addEventListener('input', (e) => {
