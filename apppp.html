@@ -37,7 +37,7 @@
                 display: flex; /* Active screen is displayed */
             }
 
-        /* Specific styles for camera preview and Three.js canvas */
+        /* Specific styles for camera preview (now simulated video) and Three.js canvas */
         #camera-preview {
             position: fixed;
             top: 0;
@@ -399,8 +399,8 @@
     </style>
 </head>
 <body>
-    <!-- Camera Preview Video Element -->
-    <video id="camera-preview"></video>
+    <!-- Camera Preview Video Element (Now for simulation only) -->
+    <video id="camera-preview" loop muted playsinline></video>
     <!-- Three.js Canvas for Ink Adjustment -->
     <canvas id="inkCubeCanvas"></canvas>
 
@@ -408,19 +408,19 @@
     <div id="home-screen" class="screen active bg-gradient-to-br from-blue-100 to-indigo-100 p-4">
         <div class="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full text-center">
             <h1 class="text-4xl font-extrabold text-gray-800 mb-6 font-inter">墨立方流韻</h1>
-            <p class="text-lg text-gray-600 mb-8 font-inter">透過攝影機捕捉畫面，創造您的數位水墨意境。</p>
+            <p class="text-lg text-gray-600 mb-8 font-inter">透過模擬畫面捕捉，創造您的數位水墨意境。</p>
             <button id="home-to-camera-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105 font-inter">
                 拍照
             </button>
         </div>
     </div>
 
-    <!-- Camera View Screen -->
+    <!-- Camera View Screen (Now a simulated camera view) -->
     <div id="camera-view-screen" class="screen bg-gradient-to-br from-gray-100 to-gray-200 p-4">
         <div class="bg-white rounded-xl shadow-2xl p-8 max-w-lg w-full text-center">
-            <h2 class="text-3xl font-bold text-gray-800 mb-6 font-inter">即時拍攝</h2>
+            <h2 class="text-3xl font-bold text-gray-800 mb-6 font-inter">即時拍攝 (模擬)</h2>
             <div class="relative w-full max-w-full overflow-hidden rounded-lg shadow-md mb-6 bg-gray-700" style="aspect-ratio: 4/3;">
-                <!-- Video element is outside this div, but its content will be here -->
+                <!-- camera-preview video element is positioned fixed outside this div -->
                 <canvas id="captureCanvas" style="display: none;"></canvas> <!-- Hidden canvas for photo capture -->
             </div>
 
@@ -432,7 +432,7 @@
                     確定拍攝
                 </button>
             </div>
-            <p class="text-sm text-gray-500 mt-4 font-inter">請允許瀏覽器訪問攝影機。</p>
+            <p class="text-sm text-gray-500 mt-4 font-inter">此為模擬攝影機畫面，點擊「確定拍攝」將捕捉此畫面。</p>
         </div>
     </div>
 
@@ -481,6 +481,8 @@
     <script>// --- Global Variables ---
         let currentScreen = 'home'; // 'home', 'cameraView', 'inkAdjustment', 'artworkDisplay'
         let uploadedImageUrl = null;
+        // Simulated video source for camera preview. Replace with your own video if desired.
+        const simulatedVideoSource = "https://www.w3schools.com/html/mov_bbb.mp4"; // A public domain test video
         let finalArtworkImageUrl = null; // This will now be the captured Three.js canvas data URL
 
         // DOM Elements
@@ -489,9 +491,8 @@
         const inkAdjustmentScreen = document.getElementById('ink-adjustment-screen');
         const artworkDisplayScreen = document.getElementById('artwork-display-screen');
 
-        const cameraPreview = document.getElementById('camera-preview');
+        const cameraPreview = document.getElementById('camera-preview'); // Video element for simulation
         const captureCanvas = document.getElementById('captureCanvas'); // For capturing photo from video
-        let mediaStream = null; // To hold the camera stream
 
         let threeCanvas; // Declared here, assigned in window.onload
         let threeScene, threeCamera, threeRenderer;
@@ -516,12 +517,12 @@
             switch (screenName) {
                 case 'home':
                     homeScreen.classList.add('active');
-                    stopCamera(); // Ensure camera is off when not in camera view
+                    stopSimulatedCamera(); // Ensure simulated camera is off
                     cleanupThreeJsScene(); // Ensure Three.js is cleaned up
                     break;
                 case 'cameraView':
                     cameraViewScreen.classList.add('active');
-                    startCamera();
+                    startSimulatedCamera(); // Start simulated camera
                     cleanupThreeJsScene(); // Ensure Three.js is cleaned up
                     break;
                 case 'inkAdjustment':
@@ -552,59 +553,31 @@
             currentScreen = screenName;
         }
 
-        // --- Camera Functions ---
-        async function startCamera() {
-            console.log("Attempting to start camera...");
-            stopCamera(); // Ensure any existing stream is stopped
-            try {
-                // Check for HTTPS first (most common issue)
-                if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-                    const secureContextMessage = "無法開啟攝影機：為了保護您的隱私，瀏覽器要求在 HTTPS (安全連線) 環境下才能存取攝影機。請確保網址以 'https://' 開頭。如果您在本機測試，請使用支援 HTTPS 的開發伺服器（例如：live-server --https）。";
-                    console.error(secureContextMessage);
-                    alert(secureContextMessage);
-                    showScreen('home'); // Go back to home on failure
-                    return;
-                }
-
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-                cameraPreview.srcObject = stream;
-                mediaStream = stream;
-                cameraPreview.play();
-                cameraPreview.style.display = 'block'; // Show video element
-                console.log("Camera started successfully.");
-            } catch (err) {
-                console.error("無法訪問攝影機: ", err);
-                let errorMessage = "無法啟動攝影機。";
-                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                    errorMessage += " 權限被拒絕：請允許瀏覽器使用攝影機。";
-                } else if (err.name === 'NotFoundError') {
-                    errorMessage += " 找不到攝影機：請確認您的裝置有攝影機。";
-                } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
-                    errorMessage += " 攝影機無法使用：可能被其他應用程式佔用。";
-                } else if (err.name === 'SecurityError') {
-                    errorMessage += " 安全錯誤：請確認您正在使用 HTTPS 安全連線。";
-                } else {
-                    errorMessage += " 未知錯誤：" + err.message;
-                }
-                alert(errorMessage);
-                showScreen('home'); // Go back to home on failure
-            }
+        // --- Simulated Camera Functions ---
+        function startSimulatedCamera() {
+            console.log("Starting simulated camera...");
+            cameraPreview.src = simulatedVideoSource;
+            cameraPreview.loop = true; // Loop the video
+            cameraPreview.muted = true; // Mute the video
+            cameraPreview.play().catch(e => console.error("Error playing simulated video:", e)); // Play and catch potential errors
+            cameraPreview.style.display = 'block'; // Show video element
         }
 
-        function stopCamera() {
-            if (mediaStream) {
-                console.log("Stopping camera stream.");
-                mediaStream.getTracks().forEach(track => track.stop());
-                mediaStream = null;
-            }
-            if (cameraPreview.srcObject) {
+        function stopSimulatedCamera() {
+            if (cameraPreview.srcObject) { // If it was a real stream (unlikely in this version)
+                cameraPreview.srcObject.getTracks().forEach(track => track.stop());
                 cameraPreview.srcObject = null;
             }
+            if (cameraPreview.src) { // If it was a simulated video
+                cameraPreview.pause();
+                cameraPreview.src = ''; // Clear source
+            }
             cameraPreview.style.display = 'none'; // Hide video element
+            console.log("Simulated camera stopped.");
         }
 
         function capturePhoto() {
-            console.log("Capturing photo...");
+            console.log("Capturing photo from simulated camera...");
             if (cameraPreview && captureCanvas && cameraPreview.videoWidth > 0) {
                 const video = cameraPreview;
                 const canvas = captureCanvas;
@@ -616,12 +589,16 @@
                 context.drawImage(video, 0, 0, canvas.width, canvas.height);
                 uploadedImageUrl = canvas.toDataURL('image/png');
 
-                stopCamera(); // Stop camera after capturing photo
+                stopSimulatedCamera(); // Stop simulated camera after capturing photo
                 showScreen('inkAdjustment'); // Move to ink adjustment screen
-                console.log("Photo captured and screen switched to ink adjustment.");
+                console.log("Photo captured from simulated camera and screen switched to ink adjustment.");
             } else {
-                console.error("Cannot capture photo: camera preview not ready or videoWidth is 0.");
-                alert("無法拍攝照片，請確保攝影機已啟動並顯示畫面。");
+                console.error("Cannot capture photo: simulated camera preview not ready or videoWidth is 0.");
+                alert("無法拍攝照片，請確保模擬攝影機已啟動並顯示畫面。");
+                // Fallback to a static placeholder if even simulated capture fails
+                uploadedImageUrl = "https://placehold.co/1280x720/FF0000/FFFFFF?text=Simulated+Capture+Failed";
+                stopSimulatedCamera();
+                showScreen('inkAdjustment');
             }
         }
 
@@ -629,17 +606,17 @@
         function initThreeJsScene(imageSource) {
             console.log("Initializing Three.js scene with image:", imageSource);
             // Ensure threeCanvas exists before proceeding
-            // threeCanvas is now assigned in window.onload, so it should be available.
-            if (!threeCanvas) {
-                console.error("initThreeJsScene: Global inkCubeCanvas element is null!");
+            const currentThreeCanvas = document.getElementById('inkCubeCanvas');
+            if (!currentThreeCanvas) {
+                console.error("initThreeJsScene: inkCubeCanvas element not found!");
                 return;
             }
 
             // Cleanup previous scene if exists
             cleanupThreeJsScene();
 
-            const width = threeCanvas.clientWidth; // Access directly now
-            const height = threeCanvas.clientHeight;
+            const width = currentThreeCanvas.clientWidth;
+            const height = currentThreeCanvas.clientHeight;
 
             // Scene
             threeScene = new THREE.Scene();
@@ -649,7 +626,7 @@
             threeCamera.position.z = 1.5; // Position camera to view the scene
 
             // Renderer
-            threeRenderer = new THREE.WebGLRenderer({ canvas: threeCanvas, alpha: true, antialias: true });
+            threeRenderer = new THREE.WebGLRenderer({ canvas: currentThreeCanvas, alpha: true, antialias: true });
             threeRenderer.setSize(width, height);
             threeRenderer.setPixelRatio(window.devicePixelRatio);
 
@@ -682,7 +659,7 @@
                 if (!animationFrameId) { // Prevent multiple animation loops
                     animationFrameId = requestAnimationFrame(animate);
                 }
-                alert("載入背景圖片失敗，將使用預設背景。");
+                // Removed alert for texture loading error
             });
 
             // Create Ink Cubes
